@@ -11,11 +11,11 @@ This is intentional to *Keep It Simple, Stupid*! 😛
 
 Currently we don't need to receive YouTube/Twitch/Twitter/etc notifications from other projects that aren't Loritta, however if some day we *need* to do this, refactoring SocialRelayer to support this shouldn't be that hard.
 
-## Synchronization 
+## 🔄 Synchronization 
 
 While this repository is targeted only to Loritta, the repository still contains some nifty tricks to synchronize social media data to Discord, which they may be useful to other developers, here's a high level overview of the tips and tricks we implemented.
 
-### Twitter
+### 🐦 Twitter
 
 Twitter tweet synchronization uses a multitude of different methods to track all tweets from all tracked accounts, falling back when a method is in its limits.
 
@@ -39,10 +39,10 @@ There is also some other polling methods that could be done if Twitter starts li
 
 * Add all tracked users to a list, however you may get list shadow-banned for a few days. Twitter allows you to query all the tweets in a single list, making it perfect as a polling alternative and it uses way less requests than polling everyone manually!
 
-### YouTube
+### 📽️ YouTube
 
 *TODO*
 
-### Twitch
+### 🛀 Twitch
 
 *TODO*

@@ -46,12 +46,13 @@ class RelayToLorittaTrackersWebhook(val tweetRelayer: TweetRelayer) {
                         logger.warn { "Failed to create a WebhookMessageBuilder for message ${tracked[TrackedTwitterAccounts.message]} to relay $tweetInfo of guild $guildId in channel $channelId, defaulting to the tweet URL..." }
                         WebhookMessageBuilder().append("https://twitter.com/${tweetInfo.screenName}/status/${tweetInfo.tweetId}")
                     }
-                        .setUsername("Loritta \uD83D\uDC26")
-                        .setAvatarUrl("https://cdn.discordapp.com/attachments/617182204212150316/797476909923041365/original.png")
 
                     val result = tweetRelayer.webhookManager.sendMessageViaWebhook(
                         channelId,
-                        message.build()
+                        message
+                            .setUsername("Loritta \uD83D\uDC26")
+                            .setAvatarUrl("https://cdn.discordapp.com/attachments/617182204212150316/797476909923041365/original.png")
+                            .build()
                     )
 
                     if (result) {

@@ -9,6 +9,7 @@ object CachedDiscordWebhooks : IdTable<Long>("")  {
     override val id: Column<EntityID<Long>> = long("channel").entityId()
     override val primaryKey by lazy { super.primaryKey ?: PrimaryKey(id) }
 
+    val webhookId = long("webhook_id").nullable()
     val webhookToken = text("webhook_token").nullable()
     val state = enumeration("state", WebhookState::class)
     val updatedAt = long("updated_at")

@@ -9,6 +9,7 @@ class CachedDiscordWebhook(id: EntityID<Long>) : LongEntity(id) {
     companion object : LongEntityClass<CachedDiscordWebhook>(CachedDiscordWebhooks)
 
     var channelId by CachedDiscordWebhooks.id
+    var webhookId by CachedDiscordWebhooks.webhookId
     var webhookToken by CachedDiscordWebhooks.webhookToken
     var state by CachedDiscordWebhooks.state
     var updatedAt by CachedDiscordWebhooks.updatedAt

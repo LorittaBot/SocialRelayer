@@ -20,6 +20,7 @@ import net.perfectdreams.loritta.socialrelayer.common.tables.CachedDiscordWebhoo
 import net.perfectdreams.loritta.socialrelayer.common.utils.MessageUtils
 import okhttp3.OkHttpClient
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
 import pw.forst.exposed.insertOrUpdate
 import java.util.concurrent.Executors
@@ -97,9 +98,9 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                     createdWebhook = kordWebhook
                 }
 
-                val webhook = firstAvailableWebhook ?: createdWebhook ?: error("No webhook was found!")
+                val webhook = createdWebhook ?: firstAvailableWebhook ?: error("No webhook was found!")
 
-                logger.info { "Successfully created webhook in $channelId!" }
+                logger.info { "Successfully found webhook in $channelId!" }
 
                 // Store the newly found webhook in our database!
                 guildWebhookFromDatabase = withContext(Dispatchers.IO) {
@@ -107,6 +108,7 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                         CachedDiscordWebhook.wrapRow(
                             CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
                                 it[id] = channelId
+                                it[webhookId] = webhook.channelId.value
                                 it[webhookToken] = webhook.token.value!! // I doubt that the token can be null so let's just force null, heh
                                 it[state] = WebhookState.SUCCESS
                                 it[updatedAt] = System.currentTimeMillis()
@@ -154,7 +156,7 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
 
         try {
             withContext(Dispatchers.IO) {
-                WebhookClientBuilder("https://discord.com/api/webhooks/${webhook.channelId.value}/${webhook.webhookToken}")
+                WebhookClientBuilder("https://discord.com/api/webhooks/${webhook.webhookId}/${webhook.webhookToken}")
                     .setHttpClient(webhookOkHttpClient)
                     .setExecutorService(webhookExecutor)
                     .setWait(true) // We want to wait to check if the webhook still exists!
@@ -167,11 +169,13 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
 
             return if (statusCode == 404) {
                 logger.warn(e) { "Webhook $webhook in $channelId does not exist! Deleting the webhook from the database and retrying..." }
+
                 withContext(Dispatchers.IO) {
                     transaction(database) {
                         webhook.delete()
                     }
                 }
+
                 sendMessageViaWebhook(channelId, message)
             } else {
                 logger.warn(e) { "Something went wrong while sending the webhook message $message in $channelId using webhook $webhook!" }

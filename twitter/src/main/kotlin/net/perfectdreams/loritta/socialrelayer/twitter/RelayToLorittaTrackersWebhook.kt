@@ -33,6 +33,8 @@ class RelayToLorittaTrackersWebhook(val tweetRelayer: TweetRelayer) {
                 val guildId = tracked[TrackedTwitterAccounts.guildId]
                 val channelId = tracked[TrackedTwitterAccounts.channelId]
 
+                logger.info { "Guild $guildId is tracking ${tweetInfo} in $channelId" }
+
                 val message = MessageUtils.generateMessage(
                     tracked[TrackedTwitterAccounts.message],
                     listOf(),

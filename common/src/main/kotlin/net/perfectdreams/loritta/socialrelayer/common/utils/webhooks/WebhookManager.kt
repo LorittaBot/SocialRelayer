@@ -100,6 +100,7 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                 val webhook = firstAvailableWebhook ?: createdWebhook ?: error("No webhook was found!")
 
                 logger.info { "Successfully created webhook in $channelId!" }
+
                 // Store the newly found webhook in our database!
                 guildWebhookFromDatabase = withContext(Dispatchers.IO) {
                     transaction(database) {

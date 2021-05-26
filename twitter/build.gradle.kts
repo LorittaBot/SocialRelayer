@@ -43,7 +43,7 @@ jib {
             password = System.getProperty("DOCKER_PASSWORD") ?: System.getenv("DOCKER_PASSWORD")
         }
     }
-    
+
     from {
         image = "openjdk:15.0.2-slim-buster"
     }

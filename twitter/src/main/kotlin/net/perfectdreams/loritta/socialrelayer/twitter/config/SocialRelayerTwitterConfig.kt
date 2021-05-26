@@ -8,5 +8,6 @@ import net.perfectdreams.loritta.socialrelayer.common.config.LorittaDatabaseConf
 class SocialRelayerTwitterConfig(
     val discord: DiscordConfig,
     val database: LorittaDatabaseConfig,
-    val twitter: TwitterConfig
+    val twitter: TwitterConfig,
+    val tweetWebhook: String
 )

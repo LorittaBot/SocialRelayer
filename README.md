@@ -28,6 +28,7 @@ To track everyone...
 * The top 10000 accounts are tracked via Twitter API v1 Stream, Twitter API v1 Stream is the best because you can register 5000 users per stream (you can have two streams per IP) and there aren't any tweet limits!
 * From the remaining accounts, the top ~200 accounts are tracked via Twitter API v2 Stream, Twitter API v2 Stream is worse than the Twitter API v1 Stream and you can't even get *near* the limit Twitter API v1 Stream provides, Twitter API v2 Stream uses Twitter Search Rules (`user:LorittaBot OR user:MrPowerGamerBR`...) so your tracked account limit is based on the length of the usernames you want to track. You can register 25 rules and all rules needs to have less than 512 characters. Twitter API v2 Stream also consumes your monthly quota of tweets,
 * The remaining accounts are then tracked via polling Twitter's Timeline via the Publish embed. There doesn't seem to have any limits in the Publish embed and because it is hosted in a `cdn` domain the chances of you getting IP banned seems to be very low. However polling is a gigantic cumbersome task that uses a lot of resources, so Loritta periodically checks the timelines depending on the user's activity.
+* * The endpoint is `https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=${randomDomainHere}&lang=en&screen_name=${screenName}&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0100&with_replies=false`. This endpoint uses JSONP. If successful, the response will contain the HTML of the Twitter Timeline Embed, if not, the response will contain an error.
 * * **User tweeted in the last 3 days?** Check every 30 seconds!
 * * **User tweeted in the last 7 days?** Check every 120 seconds!
 * * **User tweeted in the last 14 days?** Check every 5 minutes!
@@ -35,7 +36,7 @@ To track everyone...
 * * **Anything else?** Check every 15 minutes!
 * * The requests also have a bit of randomness in them to avoid querying everything all at once, and to make the requests seem less [sus](https://www.youtube.com/watch?v=QYswdRMsAoU&feature=youtu.be&t=715).
 
-There is also some other polling methods that could be done if Twitter starts limiting its API...
+There are also some other polling methods that could be implemented if Twitter starts limiting its API...
 
 * Add all tracked users to a list, however you may get list shadow-banned for a few days. Twitter allows you to query all the tweets in a single list, making it perfect as a polling alternative and it uses way less requests than polling everyone manually!
 

@@ -3,7 +3,7 @@
 
 SocialRelayer is a social media relayer to Discord via webhooks, pulling Loritta's guild configurations to automatically register and synchronize new posts from other platforms to Discord.
 
-SocialRelayer is not really a "micro-service", from the words of [Napster](https://github.com/napstr/)]...
+SocialRelayer is not really a "micro-service", from the words of [Napster](https://github.com/napstr/)...
 
 > if your "microservices" are accessing the same tables, you dont have microservices, you have a distributed monolith
 

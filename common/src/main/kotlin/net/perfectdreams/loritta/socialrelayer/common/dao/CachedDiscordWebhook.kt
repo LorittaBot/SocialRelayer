@@ -14,8 +14,8 @@ class CachedDiscordWebhook(id: EntityID<Long>) : LongEntity(id) {
     var state by CachedDiscordWebhooks.state
     var updatedAt by CachedDiscordWebhooks.updatedAt
     var lastSuccessfullyExecutedAt by CachedDiscordWebhooks.lastSuccessfullyExecutedAt
-
+    
     override fun toString(): String {
-        return "CachedDiscordWebhook(channelId=$channelId, webhookToken=$webhookToken, state=$state, updatedAt=$updatedAt, lastSuccessfullyExecutedAt=$lastSuccessfullyExecutedAt)"
+        return "CachedDiscordWebhook(channelId=$channelId, webhookId=$webhookId, webhookToken=$webhookToken, state=$state, updatedAt=$updatedAt, lastSuccessfullyExecutedAt=$lastSuccessfullyExecutedAt)"
     }
 }

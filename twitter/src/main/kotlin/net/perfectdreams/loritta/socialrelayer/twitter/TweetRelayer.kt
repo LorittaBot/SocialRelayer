@@ -58,6 +58,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             // We aren't going to create anything that is handled by Loritta
             SchemaUtils.createMissingTablesAndColumns(
                 CachedDiscordWebhooks,
+                CachedTwitterAccounts,
                 InvalidTwitterIds
             )
         }

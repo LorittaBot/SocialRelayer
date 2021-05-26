@@ -7,7 +7,9 @@ SocialRelayer is not really a "micro-service", from the words of [Napster](https
 
 > if your "microservices" are accessing the same tables, you dont have microservices, you have a distributed monolith
 
-This is intentional to *Keep It Simple, Stupid*! 😛 Currently we don't need to receive YouTube/Twitch/Twitter/etc notifications from other projects that aren't Loritta, however if some day we *need* to do this, refactoring SocialRelayer to support this shouldn't be that hard.
+This is intentional to *Keep It Simple, Stupid*! 😛
+
+Currently we don't need to receive YouTube/Twitch/Twitter/etc notifications from other projects that aren't Loritta, however if some day we *need* to do this, refactoring SocialRelayer to support this shouldn't be that hard.
 
 ## Synchronization 
 
@@ -24,8 +26,8 @@ Twitter tweet synchronization uses a multitude of different methods to track all
 To track everyone...
 
 * The top 10000 accounts are tracked via Twitter API v1 Stream, Twitter API v1 Stream is the best because you can register 5000 users per stream (you can have two streams per IP) and there aren't any tweet limits!
-* The ~200 accounts are tracked via Twitter API v2 Stream, Twitter API v2 Stream is worse than the Twitter API v1 Stream and you can't even get *near* the limit Twitter API v1 Stream provides, Twitter API v2 Stream uses Twitter Search Rules (`user:LorittaBot OR user:MrPowerGamerBR`...) so your tracked account limit is based on the length of the usernames you want to track. You can register 25 rules and all rules needs to have less than 512 characters. Twitter API v2 Stream also consumes your monthly quota of tweets,
-* The remaining accounts are tracked via polling Twitter's Timeline via the Publish embed. There doesn't seem to have any limits in the Publish embed and because it is hosted in a `cdn` domain the chances of you getting IP banned seems to be very low. However polling is a gigantic cumbersome task that uses a lot of resources, so Loritta periodically checks the timelines depending on the user's activity.
+* From the remaining accounts, the top ~200 accounts are tracked via Twitter API v2 Stream, Twitter API v2 Stream is worse than the Twitter API v1 Stream and you can't even get *near* the limit Twitter API v1 Stream provides, Twitter API v2 Stream uses Twitter Search Rules (`user:LorittaBot OR user:MrPowerGamerBR`...) so your tracked account limit is based on the length of the usernames you want to track. You can register 25 rules and all rules needs to have less than 512 characters. Twitter API v2 Stream also consumes your monthly quota of tweets,
+* The remaining accounts are then tracked via polling Twitter's Timeline via the Publish embed. There doesn't seem to have any limits in the Publish embed and because it is hosted in a `cdn` domain the chances of you getting IP banned seems to be very low. However polling is a gigantic cumbersome task that uses a lot of resources, so Loritta periodically checks the timelines depending on the user's activity.
 * * **User tweeted in the last 3 days?** Check every 30 seconds!
 * * **User tweeted in the last 7 days?** Check every 120 seconds!
 * * **User tweeted in the last 14 days?** Check every 5 minutes!

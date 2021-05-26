@@ -1,6 +1,7 @@
 package net.perfectdreams.loritta.socialrelayer.common.utils.webhooks
 
 import club.minnced.discord.webhook.WebhookClientBuilder
+import club.minnced.discord.webhook.exception.HttpException
 import club.minnced.discord.webhook.send.WebhookMessage
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
 import dev.kord.common.entity.DiscordWebhook
@@ -99,41 +100,48 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                 val webhook = firstAvailableWebhook ?: createdWebhook ?: error("No webhook was found!")
 
                 // Store the newly found webhook in our database!
-                guildWebhookFromDatabase = transaction(database) {
-                    CachedDiscordWebhook.wrapRow(
-                        CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
-                            it[id] = channelId
-                            it[webhookToken] = webhook.token.value!! // I doubt that the token can be null so let's just force null, heh
-                            it[state] = WebhookState.SUCCESS
-                            it[updatedAt] = System.currentTimeMillis()
-                        }.resultedValues!!.first()
-                    )
+                guildWebhookFromDatabase = withContext(Dispatchers.IO) {
+                    transaction(database) {
+                        CachedDiscordWebhook.wrapRow(
+                            CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
+                                it[id] = channelId
+                                it[webhookToken] =
+                                    webhook.token.value!! // I doubt that the token can be null so let's just force null, heh
+                                it[state] = WebhookState.SUCCESS
+                                it[updatedAt] = System.currentTimeMillis()
+                            }.resultedValues!!.first()
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 if (e is KtorRequestException) {
                     if (e.error?.code == JsonErrorCode.UnknownChannel) {
                         logger.warn(e) { "Unknown channel: $channelId; We are WILL NEVER check this channel again!" }
 
-                        transaction(database) {
-                            CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
-                                it[id] = channelId
-                                // We don't replace the webhook token here... there is no pointing in replacing it.
-                                it[state] = WebhookState.UNKNOWN_CHANNEL
-                                it[updatedAt] = System.currentTimeMillis()
-                            }.resultedValues!!.first()
+                        withContext(Dispatchers.IO) {
+                            transaction(database) {
+                                CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
+                                    it[id] = channelId
+                                    // We don't replace the webhook token here... there is no pointing in replacing it.
+                                    it[state] = WebhookState.UNKNOWN_CHANNEL
+                                    it[updatedAt] = System.currentTimeMillis()
+                                }.resultedValues!!.first()
+                            }
                         }
                         return false
                     }
                 }
                 logger.warn(e) { "Failed to get webhook in channel $channelId" }
 
-                transaction(database) {
-                    CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
-                        it[id] = channelId
-                        // We don't replace the webhook token here... there is no pointing in replacing it.
-                        it[state] = WebhookState.MISSING_PERMISSION
-                        it[updatedAt] = System.currentTimeMillis()
-                    }.resultedValues!!.first()
+                withContext(Dispatchers.IO) {
+                    transaction(database) {
+                        CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
+                            it[id] = channelId
+                            // We don't replace the webhook token here... there is no pointing in replacing it.
+                            it[state] = WebhookState.MISSING_PERMISSION
+                            it[updatedAt] = System.currentTimeMillis()
+                        }.resultedValues!!.first()
+                    }
                 }
                 return false
             }
@@ -143,11 +151,30 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
 
         logger.info { "Sending $message in $channelId... Using webhook $webhook" }
 
-        WebhookClientBuilder("https://discord.com/api/webhooks/${webhook.channelId.value}/${webhook.webhookToken}")
-            .setHttpClient(webhookOkHttpClient)
-            .setExecutorService(webhookExecutor)
-            .build()
-            .send(message).await()
+        try {
+            WebhookClientBuilder("https://discord.com/api/webhooks/${webhook.channelId.value}/${webhook.webhookToken}")
+                .setHttpClient(webhookOkHttpClient)
+                .setExecutorService(webhookExecutor)
+                .setWait(true) // We want to wait to check if the webhook still exists!
+                .build()
+                .send(message)
+                .await()
+        } catch (e: HttpException) {
+            val statusCode = e.code
+
+            if (statusCode == 404) {
+                logger.warn(e) { "Webhook $webhook in $channelId does not exist! Deleting the webhook from the database and retrying..." }
+                withContext(Dispatchers.IO) {
+                    transaction(database) {
+                        webhook.delete()
+                    }
+                }
+                return sendMessageViaWebhook(channelId, message)
+            } else {
+                logger.warn(e) { "Something went wrong while sending the webhook message $message in $channelId using webhook $webhook!" }
+                return false
+            }
+        }
 
         logger.info { "Everything went well when sending $message in $channelId using webhook $webhook, updating last used time..." }
 

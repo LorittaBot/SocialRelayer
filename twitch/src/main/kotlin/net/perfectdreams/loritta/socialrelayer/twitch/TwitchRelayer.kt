@@ -8,13 +8,17 @@ import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.runBlocking
+import net.perfectdreams.loritta.socialrelayer.common.tables.CachedDiscordWebhooks
 import net.perfectdreams.loritta.socialrelayer.common.utils.DatabaseUtils
 import net.perfectdreams.loritta.socialrelayer.common.utils.webhooks.WebhookManager
 import net.perfectdreams.loritta.socialrelayer.twitch.config.SocialRelayerTwitchConfig
 import net.perfectdreams.loritta.socialrelayer.twitch.routes.api.v1.callbacks.PostTwitchEventSubRoute
+import net.perfectdreams.loritta.socialrelayer.twitch.tables.TwitchEventSubEvents
 import net.perfectdreams.loritta.socialrelayer.twitch.utils.TwitchAPI
 import net.perfectdreams.loritta.socialrelayer.twitch.utils.TwitchRequestUtils
 import net.perfectdreams.sequins.ktor.BaseRoute
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -39,6 +43,13 @@ class TwitchRelayer(val config: SocialRelayerTwitchConfig) {
         .build()
 
     fun start() {
+        transaction(lorittaDatabase) {
+            // We aren't going to create anything that is handled by Loritta
+            SchemaUtils.createMissingTablesAndColumns(
+                TwitchEventSubEvents
+            )
+        }
+
         Executors.newScheduledThreadPool(1).scheduleWithFixedDelay(RegisterTwitchEventSubsTask(this), 0L, 1L, TimeUnit.MINUTES)
 
         embeddedServer(Netty, port = 8000) {

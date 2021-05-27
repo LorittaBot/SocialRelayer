@@ -81,6 +81,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                     }
 
                     logger.info { "Total Cost for $twitch: $changedTotalCost" }
+
                     totalCostPerTwitchAPI[twitch] = TwitchCost(
                         changedTotalCost,
                         maxTotalCost

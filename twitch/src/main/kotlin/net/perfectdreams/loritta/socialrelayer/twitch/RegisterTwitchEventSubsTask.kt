@@ -72,7 +72,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                         subscriptions.filter { it.condition["broadcaster_user_id"]!!.toLong() !in allChannelIds || it.transport.callback != twitchRelayer.config.webhookUrl }
 
                     for (toBeRemovedSubscription in toBeRemovedSubscriptions) {
-                        logger.info { "Deleting subscription $toBeRemovedSubscription because there isn't any guilds tracking them..." }
+                        logger.info { "Deleting subscription $toBeRemovedSubscription from $twitch (${twitch.clientId}) because there isn't any guilds tracking them..." }
                         TwitchRequestUtils.deleteSubscription(twitch, toBeRemovedSubscription.id)
                         allSubscriptions.remove(toBeRemovedSubscription)
 
@@ -81,8 +81,8 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                     }
 
                     val totalAlreadySubscribed = allSubscriptions.count { it.condition["broadcaster_user_id"]!!.toLong() in allChannelIds && it.transport.callback == twitchRelayer.config.webhookUrl }
-                    logger.info { "Total subscribers in $twitch: $totalAlreadySubscribed" }
-                    logger.info { "Total Cost for $twitch: $changedTotalCost" }
+                    logger.info { "Total subscribers in $twitch (${twitch.clientId}): $totalAlreadySubscribed" }
+                    logger.info { "Total Cost for $twitch (${twitch.clientId}): $changedTotalCost" }
 
                     totalCostPerTwitchAPI[twitch] = TwitchCost(
                         changedTotalCost,
@@ -92,7 +92,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                     // If the sub list is empty (so..., zero cost) we are going to not check any other sub lists, because they will probably be empty and, if they aren't, they
                     // probably won't cause issues to us anyway
                     if (totalCost == 0) {
-                        logger.info { "Total Cost for $twitch is 0, we aren't going to check other accounts then..." }
+                        logger.info { "Total Cost for $twitch (${twitch.clientId}) is 0, we aren't going to check other accounts then..." }
                         break
                     }
                 }
@@ -129,7 +129,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                             )
                         )
                     )
-                    logger.info { "Successfully created subscription for $channel!" }
+                    logger.info { "Successfully created subscription for $channel in $bestTwitchAPIToBeUsed (${bestTwitchAPIToBeUsed.clientId})!" }
 
                     // Update with the new cost
                     totalCostPerTwitchAPI[bestTwitchAPIToBeUsed.key] = bestTwitchAPIToBeUsed.value.copy(

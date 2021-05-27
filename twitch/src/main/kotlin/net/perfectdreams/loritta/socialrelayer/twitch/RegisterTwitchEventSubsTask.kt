@@ -80,6 +80,8 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                             changedTotalCost-- // Only "enabled" webhooks seems to affect the cost, so let's just decrease our total cost if needed
                     }
 
+                    val totalAlreadySubscribed = allSubscriptions.count { it.condition["broadcaster_user_id"]!!.toLong() in allChannelIds }
+                    logger.info { "Total subscribers in $twitch: $totalAlreadySubscribed" }
                     logger.info { "Total Cost for $twitch: $changedTotalCost" }
 
                     totalCostPerTwitchAPI[twitch] = TwitchCost(

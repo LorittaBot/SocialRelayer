@@ -95,7 +95,7 @@ class PostTwitchEventSubRoute(val twitchRelayer: TwitchRelayer) : BaseRoute("/ap
                                     .build()
                             )
                         }
-                        
+
                         for (tracked in trackedEntries) {
                             val guildId = tracked[TrackedTwitchAccounts.guildId]
                             val channelId = tracked[TrackedTwitchAccounts.channelId]

@@ -69,7 +69,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
 
                     // Remove all out of date twitch channels (so channels that once were in Loritta, but aren't anymore)
                     val toBeRemovedSubscriptions =
-                        subscriptions.filter { it.condition["broadcaster_user_id"]!!.toLong() !in allChannelIds }
+                        subscriptions.filter { it.condition["broadcaster_user_id"]!!.toLong() !in allChannelIds || it.transport.callback != twitchRelayer.config.webhookUrl }
 
                     for (toBeRemovedSubscription in toBeRemovedSubscriptions) {
                         logger.info { "Deleting subscription $toBeRemovedSubscription because there isn't any guilds tracking them..." }
@@ -80,7 +80,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                             changedTotalCost-- // Only "enabled" webhooks seems to affect the cost, so let's just decrease our total cost if needed
                     }
 
-                    val totalAlreadySubscribed = allSubscriptions.count { it.condition["broadcaster_user_id"]!!.toLong() in allChannelIds }
+                    val totalAlreadySubscribed = allSubscriptions.count { it.condition["broadcaster_user_id"]!!.toLong() in allChannelIds && it.transport.callback == twitchRelayer.config.webhookUrl }
                     logger.info { "Total subscribers in $twitch: $totalAlreadySubscribed" }
                     logger.info { "Total Cost for $twitch: $changedTotalCost" }
 
@@ -91,8 +91,10 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
 
                     // If the sub list is empty (so..., zero cost) we are going to not check any other sub lists, because they will probably be empty and, if they aren't, they
                     // probably won't cause issues to us anyway
-                    if (totalCost == 0)
+                    if (totalCost == 0) {
+                        logger.info { "Total Cost for $twitch is 0, we aren't going to check other accounts then..." }
                         break
+                    }
                 }
 
                 val channelsThatNeedsToBeRegistered =

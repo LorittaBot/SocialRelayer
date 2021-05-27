@@ -24,6 +24,10 @@ dependencies {
 }
 
 jib {
+    container {
+        ports = listOf("8000")
+    }
+
     to {
         image = "ghcr.io/lorittabot/socialrelayer-twitch"
 

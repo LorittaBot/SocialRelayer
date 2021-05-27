@@ -129,7 +129,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                             )
                         )
                     )
-                    logger.info { "Successfully created subscription for $channel in $bestTwitchAPIToBeUsed (${bestTwitchAPIToBeUsed.clientId})!" }
+                    logger.info { "Successfully created subscription for $channel in ${bestTwitchAPIToBeUsed.key} (${bestTwitchAPIToBeUsed.key.clientId})!" }
 
                     // Update with the new cost
                     totalCostPerTwitchAPI[bestTwitchAPIToBeUsed.key] = bestTwitchAPIToBeUsed.value.copy(

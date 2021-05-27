@@ -9,7 +9,7 @@ import java.io.File
 object TweetRelayerLauncher {
     @JvmStatic
     fun main(args: Array<String>) {
-        val config = Hocon.decodeFromConfig<SocialRelayerTwitterConfig>(ConfigFactory.parseFile(File("./app.conf")))
+        val config = Hocon.decodeFromConfig<SocialRelayerTwitterConfig>(ConfigFactory.parseFile(File(System.getProperty("config.path") ?: "./app.conf")))
 
         val relay = TweetRelayer(config)
         relay.start()

@@ -7,6 +7,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mu.KotlinLogging
+import net.perfectdreams.loritta.socialrelayer.common.utils.Constants
 import net.perfectdreams.loritta.socialrelayer.common.utils.MessageUtils
 import net.perfectdreams.loritta.socialrelayer.twitter.tables.TrackedTwitterAccounts
 import org.jetbrains.exposed.sql.select
@@ -50,8 +51,8 @@ class RelayToLorittaTrackersWebhook(val tweetRelayer: TweetRelayer) {
                     val result = tweetRelayer.webhookManager.sendMessageViaWebhook(
                         channelId,
                         message
-                            .setUsername("Loritta \uD83D\uDC26")
-                            .setAvatarUrl("https://cdn.discordapp.com/attachments/617182204212150316/797476909923041365/original.png")
+                            .setUsername("${Constants.NAME} \uD83D\uDC26")
+                            .setAvatarUrl(Constants.AVATAR_URL)
                             .build()
                     )
 

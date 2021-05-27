@@ -49,8 +49,8 @@ dependencies {
 
     // Async Appender is broke in alpha5
     // https://stackoverflow.com/questions/58742485/logback-error-no-attached-appenders-found
-    implementation("ch.qos.logback:logback-classic:1.3.0-alpha4")
-    implementation("io.github.microutils:kotlin-logging:1.8.3")
+    api("ch.qos.logback:logback-classic:1.3.0-alpha4")
+    api("io.github.microutils:kotlin-logging-jvm:2.0.6")
 
     // Graylog GELF (Logback)
     api("de.siegmar:logback-gelf:3.0.0")

@@ -13,7 +13,7 @@ class RelayToDiscordWebhook(val tweetRelayer: TweetRelayer) {
         private val logger = KotlinLogging.logger {}
     }
 
-    val webhook = WebhookClientBuilder(tweetRelayer.config.tweetWebhook)
+    val webhook = WebhookClientBuilder(tweetRelayer.config.discordTweetWebhook)
             .build()
     val pendingTwitterNotifications = ConcurrentLinkedQueue<TweetInfo>()
 

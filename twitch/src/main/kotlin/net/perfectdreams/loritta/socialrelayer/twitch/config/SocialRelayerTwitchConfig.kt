@@ -1,13 +1,15 @@
-package net.perfectdreams.loritta.socialrelayer.twitter.config
+package net.perfectdreams.loritta.socialrelayer.twitch.config
 
 import kotlinx.serialization.Serializable
 import net.perfectdreams.loritta.socialrelayer.common.config.DiscordConfig
 import net.perfectdreams.loritta.socialrelayer.common.config.LorittaDatabaseConfig
 
 @Serializable
-class SocialRelayerTwitterConfig(
+class SocialRelayerTwitchConfig(
     val discord: DiscordConfig,
     val database: LorittaDatabaseConfig,
-    val twitter: TwitterConfig,
-    val discordTweetWebhook: String
+    val twitch: List<TwitchConfig>,
+    val webhookUrl: String,
+    val webhookSecret: String,
+    val discordTwitchWebhook: String
 )

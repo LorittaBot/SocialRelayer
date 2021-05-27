@@ -37,7 +37,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
     val twitter4j = TwitterFactory(buildTwitterConfig()).instance
 
     val lorittaDatabase = DatabaseUtils.connectToDatabase(config.database)
-    val rest = RestClient(config.discord.token)
+    private val rest = RestClient(config.discord.token)
 
     val webhookManager = WebhookManager(
         rest,

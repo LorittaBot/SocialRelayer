@@ -4,7 +4,7 @@ plugins {
     id("com.google.cloud.tools.jib") version Versions.JIB
 }
 
-group = "net.perfectdreams.loritta.socialrelayer.twitter"
+group = "net.perfectdreams.loritta.socialrelayer.twitch"
 version = "1.0.0"
 
 repositories {
@@ -17,15 +17,15 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation(project(":common"))
 
-    api("org.twitter4j:twitter4j-core:4.0.7")
-    api("org.twitter4j:twitter4j-stream:4.0.7")
-
-    api("org.jsoup:jsoup:1.13.1")
+    implementation("net.perfectdreams.sequins.ktor:base-route:1.0.2")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.0.2")
+    implementation("io.ktor:ktor-server-core:${Versions.KTOR}")
+    implementation("io.ktor:ktor-server-netty:${Versions.KTOR}")
 }
 
 jib {
     to {
-        image = "ghcr.io/lorittabot/socialrelayer-twitter"
+        image = "ghcr.io/lorittabot/socialrelayer-twitch"
 
         auth {
             username = System.getProperty("DOCKER_USERNAME") ?: System.getenv("DOCKER_USERNAME")
@@ -48,7 +48,7 @@ tasks {
         DEFAULT_SHADED_WITHIN_JAR_LIBRARIES,
         configurations.runtimeClasspath.get(),
         jar.get(),
-        "net.perfectdreams.loritta.socialrelayer.twitter.TweetRelayerLauncher",
+        "net.perfectdreams.loritta.socialrelayer.twitch.TwitchRelayerLauncher",
         mapOf()
     )
 

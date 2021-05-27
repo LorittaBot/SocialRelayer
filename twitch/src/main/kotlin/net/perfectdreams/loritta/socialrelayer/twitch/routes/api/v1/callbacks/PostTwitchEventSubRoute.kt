@@ -63,6 +63,7 @@ class PostTwitchEventSubRoute(val twitchRelayer: TwitchRelayer) : BaseRoute("/ap
             call.respondText(challengeResponse.challenge)
         } else {
             // If not, then it is a EventSub event!
+            logger.info { "Received a EventSub Request from Twitch! Inserting to database..." }
             withContext(Dispatchers.IO) {
                 transaction(twitchRelayer.lorittaDatabase) {
                     TwitchEventSubEvents.insert {
@@ -88,12 +89,14 @@ class PostTwitchEventSubRoute(val twitchRelayer: TwitchRelayer) : BaseRoute("/ap
                         logger.info { "$event is being tracked by ${trackedEntries.size} different tracking entries (wow!)" }
 
                         launch {
-                            twitchRelayer.webhook.send(
-                                WebhookMessageBuilder()
-                                    .setContent("https://www.twitch.tv/${event.broadcasterUserLogin} (${trackedEntries.size} guilds)")
-                                    .setAllowedMentions(AllowedMentions.none())
-                                    .build()
-                            )
+                            withContext(Dispatchers.IO) {
+                                twitchRelayer.webhook.send(
+                                    WebhookMessageBuilder()
+                                        .setContent("https://www.twitch.tv/${event.broadcasterUserLogin} (${trackedEntries.size} guilds)")
+                                        .setAllowedMentions(AllowedMentions.none())
+                                        .build()
+                                )
+                            }
                         }
 
                         for (tracked in trackedEntries) {

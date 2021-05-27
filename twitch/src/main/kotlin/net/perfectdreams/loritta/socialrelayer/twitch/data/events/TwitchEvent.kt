@@ -13,5 +13,6 @@ import kotlinx.serialization.Serializable
     @SerialName("broadcaster_user_name")
     val broadcasterUserName: String,
     val type: String,
+    @SerialName("started_at")
     val startedAt: String
 )

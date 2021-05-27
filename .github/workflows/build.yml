@@ -37,4 +37,4 @@ jobs:
       run: "./gradlew build -Dgithub.build.id=$GITHUB_RUN_ID -Dbuild.number=$GITHUB_RUN_NUMBER -Dgit.branch=$GITHUB_REF -Dcommit.hash=$GITHUB_SHA -Dcompiled.at=${{ steps.current-time.outputs.time }}"
 
     - name: Publish to Docker
-      run: "./gradlew :twitter:jib -Dgithub.build.id=$GITHUB_RUN_ID -Dbuild.number=$GITHUB_RUN_NUMBER -Dgit.branch=$GITHUB_REF -Dcommit.hash=$GITHUB_SHA -Dcompiled.at=${{ steps.current-time.outputs.time }}"
+      run: "./gradlew :twitter:jib :twitch:jib -Dgithub.build.id=$GITHUB_RUN_ID -Dbuild.number=$GITHUB_RUN_NUMBER -Dgit.branch=$GITHUB_REF -Dcommit.hash=$GITHUB_SHA -Dcompiled.at=${{ steps.current-time.outputs.time }}"

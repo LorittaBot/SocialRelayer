@@ -138,6 +138,9 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                 }
 
                 logger.info { "Done! Successfully updated all Twitch subscriptions! :3" }
+
+                for (twitchAPIPlusCost in totalCostPerTwitchAPI)
+                    logger.info { "${twitchAPIPlusCost.key} (${twitchAPIPlusCost.key.clientId}) final costs: ${twitchAPIPlusCost.value.totalCost}" }
             } catch (e: Exception) {
                 logger.warn(e) { "Something went wrong while trying to update Twitch subscriptions!" }
             }

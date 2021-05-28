@@ -22,6 +22,7 @@ import okhttp3.OkHttpClient
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.json.JSONException
 import pw.forst.exposed.insertOrUpdate
 import java.util.concurrent.Executors
 import kotlin.time.DurationUnit
@@ -164,6 +165,9 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                     .send(message)
                     .await()
             }
+        } catch (e: JSONException) {
+            // Workaround for https://github.com/MinnDevelopment/discord-webhooks/issues/34
+            // Please remove this later!
         } catch (e: HttpException) {
             val statusCode = e.code
 

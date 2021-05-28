@@ -8,6 +8,7 @@ import io.ktor.request.*
 import io.ktor.response.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -30,6 +31,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.json.JSONException
 
 class PostTwitchEventSubRoute(val twitchRelayer: TwitchRelayer) : BaseRoute("/api/v1/callbacks/twitch") {
     companion object {
@@ -89,13 +91,18 @@ class PostTwitchEventSubRoute(val twitchRelayer: TwitchRelayer) : BaseRoute("/ap
                         logger.info { "$event is being tracked by ${trackedEntries.size} different tracking entries (wow!)" }
 
                         launch {
-                            withContext(Dispatchers.IO) {
-                                twitchRelayer.webhook.send(
-                                    WebhookMessageBuilder()
-                                        .setContent("https://www.twitch.tv/${event.broadcasterUserLogin} (${trackedEntries.size} guilds)")
-                                        .setAllowedMentions(AllowedMentions.none())
-                                        .build()
-                                )
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    twitchRelayer.webhook.send(
+                                        WebhookMessageBuilder()
+                                            .setContent("https://www.twitch.tv/${event.broadcasterUserLogin} (${trackedEntries.size} guilds)")
+                                            .setAllowedMentions(AllowedMentions.none())
+                                            .build()
+                                    ).await()
+                                }
+                            } catch (e: JSONException) {
+                                // Workaround for https://github.com/MinnDevelopment/discord-webhooks/issues/34
+                                // Please remove this later!
                             }
                         }
 

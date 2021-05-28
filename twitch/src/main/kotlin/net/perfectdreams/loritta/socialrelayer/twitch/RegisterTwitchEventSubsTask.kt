@@ -109,7 +109,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                         }
                     }
 
-                    val totalAlreadySubscribed = allSubscriptions.count { it.condition["broadcaster_user_id"]!!.toLong() in allChannelIds && it.transport.callback == twitchRelayer.config.webhookUrl }
+                    val totalAlreadySubscribed = subscriptions.count { it.condition["broadcaster_user_id"]!!.toLong() in allChannelIds && it.transport.callback == twitchRelayer.config.webhookUrl }
                     logger.info { "Total subscribers in $twitch (${twitch.clientId}): $totalAlreadySubscribed" }
                     logger.info { "Total Cost for $twitch (${twitch.clientId}): $changedTotalCost" }
 

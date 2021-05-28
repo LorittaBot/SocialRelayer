@@ -131,13 +131,13 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
 
                 logger.info { "Creating subscriptions for $channelsThatNeedsToBeRegistered channels" }
 
-                for (channel in channelsThatNeedsToBeRegistered) {
+                for ((index, channel) in channelsThatNeedsToBeRegistered.withIndex()) {
                     val bestTwitchAPIToBeUsed = totalCostPerTwitchAPI.entries.firstOrNull {
                         it.value.maxTotalCost > it.value.totalCost
                     }
 
                     if (bestTwitchAPIToBeUsed == null) {
-                        logger.error { "All Twitch accounts are full and can't be used anymore! Not registering $channel..." }
+                        logger.error { "All Twitch accounts are full and can't be used anymore! Not registering $channel... Channel Index: ${index + 1}/${channelsThatNeedsToBeRegistered.size}" }
                         continue
                     }
 
@@ -158,7 +158,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                             )
                         )
                     )
-                    logger.info { "Successfully created subscription for $channel in ${bestTwitchAPIToBeUsed.key} (${bestTwitchAPIToBeUsed.key.clientId})!" }
+                    logger.info { "Successfully created subscription for $channel in ${bestTwitchAPIToBeUsed.key} (${bestTwitchAPIToBeUsed.key.clientId})! Channel Index: ${index + 1}/${channelsThatNeedsToBeRegistered.size}" }
 
                     // Update with the new cost
                     totalCostPerTwitchAPI[bestTwitchAPIToBeUsed.key] = bestTwitchAPIToBeUsed.value.copy(

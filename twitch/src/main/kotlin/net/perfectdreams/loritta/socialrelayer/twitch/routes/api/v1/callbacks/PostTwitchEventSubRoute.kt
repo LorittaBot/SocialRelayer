@@ -130,7 +130,7 @@ class PostTwitchEventSubRoute(val twitchRelayer: TwitchRelayer) : BaseRoute("/ap
                             val result = twitchRelayer.webhookManager.sendMessageViaWebhook(
                                 channelId,
                                 message
-                                    .setUsername("${Constants.NAME} \uD83C\uDF99️")
+                                    .setUsername("${Constants.NAME} \uD83C\uDFA4️")
                                     .setAvatarUrl(Constants.AVATAR_URL)
                                     .build()
                             )

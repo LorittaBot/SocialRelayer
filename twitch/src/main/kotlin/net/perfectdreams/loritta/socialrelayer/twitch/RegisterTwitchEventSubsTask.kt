@@ -10,6 +10,9 @@ import net.perfectdreams.loritta.socialrelayer.twitch.utils.TwitchAPI
 import net.perfectdreams.loritta.socialrelayer.twitch.utils.TwitchRequestUtils
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import kotlin.collections.List
 import kotlin.collections.any
 import kotlin.collections.filter
@@ -62,22 +65,48 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                     val subscriptions = subscriptionsData.flatMap { it.data }
                     val totalCost = subscriptionsData.first().totalCost
                     val maxTotalCost = subscriptionsData.first().maxTotalCost
-                    var changedTotalCost =
-                        totalCost // We are going to use this one to "remove from the budget" outdated Twitch channels
+                    var changedTotalCost = totalCost // We are going to use this one to "remove from the budget" outdated Twitch channels
 
                     allSubscriptions.addAll(subscriptions)
 
                     // Remove all out of date twitch channels (so channels that once were in Loritta, but aren't anymore)
-                    val toBeRemovedSubscriptions =
-                        subscriptions.filter { it.condition["broadcaster_user_id"]!!.toLong() !in allChannelIds || it.transport.callback != twitchRelayer.config.webhookUrl }
+                    val toBeRemovedDueToNobodyTrackingSubscriptions = subscriptions.filter { it.condition["broadcaster_user_id"]!!.toLong() !in allChannelIds || it.transport.callback != twitchRelayer.config.webhookUrl }
 
-                    for (toBeRemovedSubscription in toBeRemovedSubscriptions) {
+                    for (toBeRemovedSubscription in toBeRemovedDueToNobodyTrackingSubscriptions) {
                         logger.info { "Deleting subscription $toBeRemovedSubscription from $twitch (${twitch.clientId}) because there isn't any guilds tracking them..." }
                         TwitchRequestUtils.deleteSubscription(twitch, toBeRemovedSubscription.id)
                         allSubscriptions.remove(toBeRemovedSubscription)
 
                         if (toBeRemovedSubscription.status == "enabled")
                             changedTotalCost-- // Only "enabled" webhooks seems to affect the cost, so let's just decrease our total cost if needed
+                    }
+
+                    // Remove all subscriptions that aren't using our callback URL
+                    val toBeRemovedDueToInvalidCallbackURLSubscriptions = subscriptions.filter { it.transport.callback != twitchRelayer.config.webhookUrl }
+
+                    for (toBeRemovedSubscription in toBeRemovedDueToInvalidCallbackURLSubscriptions) {
+                        logger.info { "Deleting subscription $toBeRemovedSubscription from $twitch (${twitch.clientId}) because the callback URL doesn't match..." }
+                        TwitchRequestUtils.deleteSubscription(twitch, toBeRemovedSubscription.id)
+                        allSubscriptions.remove(toBeRemovedSubscription)
+
+                        if (toBeRemovedSubscription.status == "enabled")
+                            changedTotalCost-- // Only "enabled" webhooks seems to affect the cost, so let's just decrease our total cost if needed
+                    }
+
+                    // Remove all subscriptions that are with a invalid state
+                    val toBeRemovedDueToInvalidStatusSubscriptions = subscriptions.filter { it.status != "enabled" }
+
+                    for (toBeRemovedSubscription in toBeRemovedDueToInvalidStatusSubscriptions) {
+                        val createdAtAsInstant = OffsetDateTime.parse (toBeRemovedSubscription.createdAt)
+                        val nowMinusMinutes = Instant.now().atOffset(ZoneOffset.UTC).minusMinutes(15)
+
+                        if (nowMinusMinutes.isAfter(createdAtAsInstant)) {
+                            logger.info { "Deleting subscription $toBeRemovedSubscription from $twitch (${twitch.clientId}) because the state is \"${toBeRemovedSubscription.status}\" and not \"enabled\"..." }
+                            TwitchRequestUtils.deleteSubscription(twitch, toBeRemovedSubscription.id)
+                            allSubscriptions.remove(toBeRemovedSubscription)
+                        } else {
+                            logger.info { "Subscription $toBeRemovedSubscription from $twitch (${twitch.clientId}) is kinda sus because the state is \"${toBeRemovedSubscription.status}\" and not \"enabled\", however we will wait a lil bit more before removing it..." }
+                        }
                     }
 
                     val totalAlreadySubscribed = allSubscriptions.count { it.condition["broadcaster_user_id"]!!.toLong() in allChannelIds && it.transport.callback == twitchRelayer.config.webhookUrl }

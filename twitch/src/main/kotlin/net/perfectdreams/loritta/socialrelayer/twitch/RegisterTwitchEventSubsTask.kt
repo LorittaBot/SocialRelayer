@@ -141,7 +141,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                         continue
                     }
 
-                    logger.info { "Creating subscription for $channel..." }
+                    logger.info { "Creating subscription for $channel in ${bestTwitchAPIToBeUsed.key} (${bestTwitchAPIToBeUsed.key.clientId})... Channel Index: ${index + 1}/${channelsThatNeedsToBeRegistered.size}" }
                     // Let's register the subscription!
                     TwitchRequestUtils.createSubscription(
                         bestTwitchAPIToBeUsed.key,

@@ -36,12 +36,16 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
     override fun run() {
         runBlocking {
             try {
+                logger.info { "Checking if there is any new channels that needs to be registered..." }
+
                 val allChannelIds = transaction(twitchRelayer.lorittaDatabase) {
                     TrackedTwitchAccounts.slice(TrackedTwitchAccounts.twitchUserId)
                         .selectAll()
                         .groupBy(TrackedTwitchAccounts.twitchUserId)
                         .toMutableList()
                 }.map { it[TrackedTwitchAccounts.twitchUserId] }
+
+                logger.info { "There are ${allChannelIds.size} tracked channels in the database!" }
 
                 // Check if both lists are the same and, if they are, we aren't going to check all subscriptions in all accounts
                 // This allows us to avoid querying Twitch's API just to check the sub list
@@ -61,6 +65,7 @@ class RegisterTwitchEventSubsTask(val twitchRelayer: TwitchRelayer) : Runnable {
                 val totalCostPerTwitchAPI = mutableMapOf<TwitchAPI, TwitchCost>()
 
                 for (twitch in twitchRelayer.twitchAccounts) {
+                    logger.info { "Loading subscriptions for $twitch (${twitch.clientId})..." }
                     val subscriptionsData = TwitchRequestUtils.loadAllSubscriptions(twitch)
                     val subscriptions = subscriptionsData.flatMap { it.data }
                     val totalCost = subscriptionsData.first().totalCost

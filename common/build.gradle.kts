@@ -16,6 +16,8 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.KOTLIN_COROUTINES}")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${Versions.KOTLIN_COROUTINES}")
 
+    api("net.perfectdreams.loritta.platforms.discord:db-tables:0.0.1-SNAPSHOT")
+
     // Used to query Loritta's DBs
     api("org.postgresql:postgresql:42.2.18")
     api("com.zaxxer:HikariCP:3.4.5")
@@ -31,6 +33,8 @@ dependencies {
 
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.KOTLIN_SERIALIZATION}")
     api("org.jetbrains.kotlinx:kotlinx-serialization-hocon:${Versions.KOTLIN_SERIALIZATION}")
+
+    api("com.github.ben-manes.caffeine:caffeine:3.0.2")
 
     // Used for REST
     // https://github.com/kordlib/kord/issues/278

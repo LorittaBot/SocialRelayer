@@ -7,7 +7,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import mu.KotlinLogging
-import net.perfectdreams.loritta.socialrelayer.common.tables.CachedDiscordWebhooks
+import net.perfectdreams.loritta.common.exposed.tables.CachedDiscordWebhooks
 import net.perfectdreams.loritta.socialrelayer.common.utils.DatabaseUtils
 import net.perfectdreams.loritta.socialrelayer.common.utils.webhooks.WebhookManager
 import net.perfectdreams.loritta.socialrelayer.twitter.config.SocialRelayerTwitterConfig
@@ -66,7 +66,6 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
         thread {
             while (true) {
                 Thread.sleep(Long.MAX_VALUE)
-                Thread.sleep(1_000)
             }
         }
 
@@ -82,10 +81,6 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
         }
 
         relayToDiscordWebhook.start()
-
-        runBlocking {
-            updateTrackers()
-        }
     }
 
     private suspend fun updateTrackers() {

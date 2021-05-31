@@ -1,6 +1,5 @@
 package net.perfectdreams.loritta.socialrelayer.twitter.tables
 
-import net.perfectdreams.loritta.socialrelayer.common.tables.CachedDiscordWebhooks
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.Column

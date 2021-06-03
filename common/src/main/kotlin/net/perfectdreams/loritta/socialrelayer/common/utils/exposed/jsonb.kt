@@ -24,7 +24,7 @@ class JsonBinary : ColumnType() {
         if (value !is PGobject)
             return value
 
-        return try {
+        try {
             return value.value!!
         } catch (e: Exception) {
             e.printStackTrace()

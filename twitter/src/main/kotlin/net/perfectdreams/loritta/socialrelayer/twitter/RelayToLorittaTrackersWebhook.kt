@@ -49,6 +49,7 @@ class RelayToLorittaTrackersWebhook(val tweetRelayer: TweetRelayer) {
                     }
 
                     val result = tweetRelayer.webhookManager.sendMessageViaWebhook(
+                        tweetRelayer.config.discord.applicationId,
                         channelId,
                         message
                             .setUsername("${Constants.NAME} \uD83D\uDC26")

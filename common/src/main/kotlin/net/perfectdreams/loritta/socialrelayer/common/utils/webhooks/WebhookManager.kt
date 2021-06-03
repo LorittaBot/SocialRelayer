@@ -57,22 +57,24 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
     /**
      * Sends the [message] to the [channelId] via a webhook, the webhook may be created or pulled from the guild if it is needed
      *
-     * @param channelId where the message will be sent
-     * @param message   the message that will be sent
+     * @param applicationId used as a webhook filter, will only get webhooks created by the application ID
+     * @param channelId     where the message will be sent
+     * @param message       the message that will be sent
      * @return if the message was successfully sent
      */
     @OptIn(ExperimentalTime::class)
-    suspend fun sendMessageViaWebhook(channelId: Long, message: WebhookMessage): Boolean {
+    suspend fun sendMessageViaWebhook(applicationId: Long, channelId: Long, message: WebhookMessage): Boolean {
         val mutex = webhookRetrievalMutex.getOrPut(channelId) { Mutex() }
         logger.info { "Retrieving webhook to be used in $channelId, is mutex locked? ${mutex.isLocked}" }
         return mutex.withLock {
-            _sendMessageViaWebhook(channelId, message)
+            _sendMessageViaWebhook(applicationId, channelId, message)
         }
     }
 
     /**
      * Sends the [message] to the [channelId] via a webhook, the webhook may be created or pulled from the guild if it is needed
      *
+     * @param applicationId used as a webhook filter, will only get webhooks created by the application ID
      * @param channelId where the message will be sent
      * @param message   the message that will be sent
      * @return if the message was successfully sent
@@ -81,7 +83,7 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
     // This is doesn't wrap in a mutex, that's why it is private
     // The reason it starts with a underscore is because it is a private method and I can't find another good name for it
     // The reason this is a separate method is to avoid deadlocking due to accessing an already locked mutex when trying to retrieve the webhook
-    private suspend fun _sendMessageViaWebhook(channelId: Long, message: WebhookMessage): Boolean {
+    private suspend fun _sendMessageViaWebhook(applicationId: Long, channelId: Long, message: WebhookMessage): Boolean {
         logger.info { "Trying to retrieve a webhook to be used in $channelId" }
 
         val alreadyCachedWebhookFromDatabase = withContext(Dispatchers.IO) {
@@ -112,7 +114,10 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                 // Try pulling the already created webhooks...
                 val webhooks = rest.webhook.getChannelWebhooks(Snowflake(channelId))
 
-                val firstAvailableWebhook = webhooks.firstOrNull { it.type == WebhookType.Incoming }
+                // Webhooks created by users or bots are INCOMING and we only want to get webhooks created by Loritta!
+                // See: https://github.com/discord/discord-api-docs/issues/3056
+                val applicationIdAsSnowflake = Snowflake(applicationId)
+                val firstAvailableWebhook = webhooks.firstOrNull { it.type == WebhookType.Incoming && it.applicationId == applicationIdAsSnowflake }
                 var createdWebhook: DiscordWebhook? = null
 
                 // Oh no, there isn't any webhooks available, let's create one!
@@ -215,7 +220,7 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                 }
                 logger.warn(e) { "Webhook $webhook in $channelId does not exist and its state was updated to ${webhook.state}!" }
 
-                _sendMessageViaWebhook(channelId, message)
+                _sendMessageViaWebhook(applicationId, channelId, message)
             } else {
                 logger.warn(e) { "Something went wrong while sending the webhook message $message in $channelId using webhook $webhook!" }
                 false

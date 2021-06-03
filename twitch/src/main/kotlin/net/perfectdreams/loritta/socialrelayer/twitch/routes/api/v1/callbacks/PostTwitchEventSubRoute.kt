@@ -128,6 +128,7 @@ class PostTwitchEventSubRoute(val twitchRelayer: TwitchRelayer) : BaseRoute("/ap
                             }
 
                             val result = twitchRelayer.webhookManager.sendMessageViaWebhook(
+                                twitchRelayer.config.discord.applicationId,
                                 channelId,
                                 message
                                     .setUsername("${Constants.NAME} \uD83C\uDFA4️")

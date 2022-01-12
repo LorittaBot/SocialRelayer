@@ -198,6 +198,8 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
                 if (value != null) {
                     jobs += GlobalScope.async {
                         semaphore.withPermit {
+                            logger.info { "Starting poll for ${value}... Finished jobs: ${jobs.count { it.isCompleted }}/${jobs.size}; Failed polls: $failCount; Didn't even check polls: $didntEvenCheckCount" }
+
                             val doCheck = 100 > failCount.get()
                             val result = tweetTrackerPollingManager.addToPolling(value, doCheck)
 

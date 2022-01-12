@@ -228,13 +228,15 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
     suspend fun check(ttpt: TweetTrackerPollingTimelineEmbed): PollingResult? {
         return semaphore.withPermit {
             try {
-                val result = ttpt.check()
+                withTimeout(15_000) {
+                    val result = ttpt.check()
 
-                mutex.withLock {
-                    trackerPollings[ttpt] = result
+                    mutex.withLock {
+                        trackerPollings[ttpt] = result
+                    }
+
+                    result
                 }
-
-                result
             } catch (e: Exception) {
                 logger.warn(e) { "Exception while checking status via polling" }
                 null

@@ -337,13 +337,14 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
                     withContext(Dispatchers.IO) {
                         transaction(lorittaDatabase) {
                             // Yet another InvalidTwitterIds check here
-                            val invalidTwitterIdsThatArentPresentInTheChunkedList = InvalidTwitterIds.select { InvalidTwitterIds.id notInList chunked }.map { it[InvalidTwitterIds.id] }
+                            val invalidTwitterIdsThatArePresentInTheDatabase = InvalidTwitterIds.select { InvalidTwitterIds.id inList chunked }.map { it[InvalidTwitterIds.id] }
+                            val invalidTwitterIdsThatArentPresentInTheDatabase = (chunked - invalidTwitterIdsThatArePresentInTheDatabase)
 
-                            if (invalidTwitterIdsThatArentPresentInTheChunkedList.isNotEmpty()) {
+                            if (invalidTwitterIdsThatArentPresentInTheDatabase.isNotEmpty()) {
                                 // By using shouldReturnGeneratedValues, the database won't need to synchronize on each insert
                                 // this increases insert performance A LOT and, because we don't need the IDs, it is very useful to make the query be VERY fast
                                 InvalidTwitterIds.batchInsert(
-                                    invalidTwitterIdsThatArentPresentInTheChunkedList,
+                                    invalidTwitterIdsThatArentPresentInTheDatabase,
                                     shouldReturnGeneratedValues = false
                                 ) {
                                     this[InvalidTwitterIds.id] = it
@@ -385,12 +386,16 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
         withContext(Dispatchers.IO) {
             transaction(lorittaDatabase) {
                 // Yet another InvalidTwitterIds check here
-                val invalidTwitterIdsThatArentPresentInTheChunkedList = InvalidTwitterIds.select { InvalidTwitterIds.id notInList missingUsers }.map { it[InvalidTwitterIds.id] }
+                val invalidTwitterIdsThatArePresentInTheDatabase = InvalidTwitterIds.select { InvalidTwitterIds.id inList missingUsers }.map { it[InvalidTwitterIds.id] }
+                val invalidTwitterIdsThatArentPresentInTheDatabase = (missingUsers - invalidTwitterIdsThatArePresentInTheDatabase)
 
-                if (invalidTwitterIdsThatArentPresentInTheChunkedList.isNotEmpty()) {
+                if (invalidTwitterIdsThatArentPresentInTheDatabase.isNotEmpty()) {
                     // By using shouldReturnGeneratedValues, the database won't need to synchronize on each insert
                     // this increases insert performance A LOT and, because we don't need the IDs, it is very useful to make the query be VERY fast
-                    InvalidTwitterIds.batchInsert(invalidTwitterIdsThatArentPresentInTheChunkedList, shouldReturnGeneratedValues = false) {
+                    InvalidTwitterIds.batchInsert(
+                        invalidTwitterIdsThatArentPresentInTheDatabase,
+                        shouldReturnGeneratedValues = false
+                    ) {
                         this[InvalidTwitterIds.id] = it
                         this[InvalidTwitterIds.retrievedAt] = retrievedAt
                     }

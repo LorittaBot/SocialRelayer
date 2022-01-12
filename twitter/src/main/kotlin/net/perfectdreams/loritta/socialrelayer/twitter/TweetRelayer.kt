@@ -26,6 +26,7 @@ import twitter4j.TwitterFactory
 import twitter4j.conf.Configuration
 import twitter4j.conf.ConfigurationBuilder
 import java.util.concurrent.atomic.AtomicInteger
+import javax.swing.SortOrder
 import kotlin.concurrent.thread
 import kotlin.system.measureTimeMillis
 
@@ -89,28 +90,28 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
                 val countField = TrackedTwitterAccounts.twitterAccountId.count()
 
                 TrackedTwitterAccounts.slice(
-                        TrackedTwitterAccounts.twitterAccountId,
-                        countField
+                    TrackedTwitterAccounts.twitterAccountId,
+                    countField
                 ).selectAll()
-                        .groupBy(TrackedTwitterAccounts.twitterAccountId)
-                        .orderBy(
-                                Pair(countField, SortOrder.DESC),
-                                Pair(TrackedTwitterAccounts.twitterAccountId, SortOrder.ASC)
-                        )
-                        .toList()
+                    .groupBy(TrackedTwitterAccounts.twitterAccountId)
+                    .orderBy(
+                        Pair(countField, SortOrder.DESC),
+                        Pair(TrackedTwitterAccounts.twitterAccountId, SortOrder.ASC)
+                    )
+                    .toList()
             }
 
             logger.info { "There is ${trackedTwitterAccounts.size} accounts that needs to be tracked!" }
 
             var copy = trackedTwitterAccounts.toList()
-                    .map { it[TrackedTwitterAccounts.twitterAccountId] }
+                .map { it[TrackedTwitterAccounts.twitterAccountId] }
             val oldStreamUserIds = copy.take(10_000)
 
             // Check if the IDs are correct
             val allTracked = tweetTrackerStreamsv1.flatMap { it.userIds }
 
             val doNotUpdateOldStream =
-                    allTracked.containsAll(oldStreamUserIds) && oldStreamUserIds.containsAll(allTracked)
+                allTracked.containsAll(oldStreamUserIds) && oldStreamUserIds.containsAll(allTracked)
 
             logger.debug { "Registering $oldStreamUserIds for Stream V1" }
             if (!doNotUpdateOldStream) {
@@ -137,7 +138,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
                 copy = copy.drop(100)
 
                 val screenNames = retrieveScreenNamesFromIds(
-                        oneHundred.toList()
+                    oneHundred.toList()
                 )
 
                 logger.debug { "Queried: $screenNames" }
@@ -153,7 +154,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             }
 
             val rules = builder.builtRules
-                    .take(25)
+                .take(25)
 
             val stream = tweetTrackerStreamv2 ?: TweetTrackerStream(this@TweetRelayer)
             // According to the docs, we don't need to create the stream again when updating the rules (yay?)
@@ -303,7 +304,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
 
         val invalidIds = retrieveInvalidIdsFromDatabaseById(userIds).map { it.accountId.value }
         val needToRetrieveScreenNames = (userIds - invalidIds)
-                .toMutableList()
+            .toMutableList()
 
         // Remove all screen names that are already cached
         needToRetrieveScreenNames.removeIf { accountId ->
@@ -328,7 +329,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             val users = try {
                 withContext(Dispatchers.IO) {
                     twitter4j.users()
-                            .lookupUsers(*chunked.toLongArray())
+                        .lookupUsers(*chunked.toLongArray())
                 }
             } catch (e: TwitterException) {
                 if (e.statusCode == 404) {
@@ -336,11 +337,19 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
 
                     withContext(Dispatchers.IO) {
                         transaction(lorittaDatabase) {
-                            // By using shouldReturnGeneratedValues, the database won't need to synchronize on each insert
-                            // this increases insert performance A LOT and, because we don't need the IDs, it is very useful to make the query be VERY fast
-                            InvalidTwitterIds.batchInsert(chunked, shouldReturnGeneratedValues = false) {
-                                this[InvalidTwitterIds.id] = it
-                                this[InvalidTwitterIds.retrievedAt] = retrievedAt
+                            // Yet another InvalidTwitterIds check here
+                            val invalidTwitterIdsThatArentPresentInTheChunkedList = InvalidTwitterIds.select { InvalidTwitterIds.id notInList chunked }.map { it[InvalidTwitterIds.id] }
+
+                            if (invalidTwitterIdsThatArentPresentInTheChunkedList.isNotEmpty()) {
+                                // By using shouldReturnGeneratedValues, the database won't need to synchronize on each insert
+                                // this increases insert performance A LOT and, because we don't need the IDs, it is very useful to make the query be VERY fast
+                                InvalidTwitterIds.batchInsert(
+                                    invalidTwitterIdsThatArentPresentInTheChunkedList,
+                                    shouldReturnGeneratedValues = false
+                                ) {
+                                    this[InvalidTwitterIds.id] = it
+                                    this[InvalidTwitterIds.retrievedAt] = retrievedAt
+                                }
                             }
                         }
                     }
@@ -391,10 +400,10 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
     fun buildTwitterConfig(): Configuration {
         val cb = ConfigurationBuilder()
         cb.setDebugEnabled(true)
-                .setOAuthConsumerKey(config.twitter.oAuthConsumerKey)
-                .setOAuthConsumerSecret(config.twitter.oAuthConsumerSecret)
-                .setOAuthAccessToken(config.twitter.oAuthAccessToken)
-                .setOAuthAccessTokenSecret(config.twitter.oAuthAccessTokenSecret)
+            .setOAuthConsumerKey(config.twitter.oAuthConsumerKey)
+            .setOAuthConsumerSecret(config.twitter.oAuthConsumerSecret)
+            .setOAuthAccessToken(config.twitter.oAuthAccessToken)
+            .setOAuthAccessTokenSecret(config.twitter.oAuthAccessTokenSecret)
 
         return cb.build()
     }

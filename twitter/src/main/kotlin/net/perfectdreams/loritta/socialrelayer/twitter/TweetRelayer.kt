@@ -337,8 +337,8 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
                     withContext(Dispatchers.IO) {
                         transaction(lorittaDatabase) {
                             // Yet another InvalidTwitterIds check here
-                            val invalidTwitterIdsThatArePresentInTheDatabase = InvalidTwitterIds.select { InvalidTwitterIds.id inList chunked }.map { it[InvalidTwitterIds.id] }
-                            val invalidTwitterIdsThatArentPresentInTheDatabase = (chunked - invalidTwitterIdsThatArePresentInTheDatabase)
+                            val invalidTwitterIdsThatArePresentInTheDatabase = InvalidTwitterIds.select { InvalidTwitterIds.id inList chunked }.map { it[InvalidTwitterIds.id].value }
+                            val invalidTwitterIdsThatArentPresentInTheDatabase = (chunked - invalidTwitterIdsThatArePresentInTheDatabase.toSet())
 
                             if (invalidTwitterIdsThatArentPresentInTheDatabase.isNotEmpty()) {
                                 // By using shouldReturnGeneratedValues, the database won't need to synchronize on each insert
@@ -386,8 +386,8 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
         withContext(Dispatchers.IO) {
             transaction(lorittaDatabase) {
                 // Yet another InvalidTwitterIds check here
-                val invalidTwitterIdsThatArePresentInTheDatabase = InvalidTwitterIds.select { InvalidTwitterIds.id inList missingUsers }.map { it[InvalidTwitterIds.id] }
-                val invalidTwitterIdsThatArentPresentInTheDatabase = (missingUsers - invalidTwitterIdsThatArePresentInTheDatabase)
+                val invalidTwitterIdsThatArePresentInTheDatabase = InvalidTwitterIds.select { InvalidTwitterIds.id inList missingUsers }.map { it[InvalidTwitterIds.id].value }
+                val invalidTwitterIdsThatArentPresentInTheDatabase = (missingUsers - invalidTwitterIdsThatArePresentInTheDatabase.toSet())
 
                 if (invalidTwitterIdsThatArentPresentInTheDatabase.isNotEmpty()) {
                     // By using shouldReturnGeneratedValues, the database won't need to synchronize on each insert

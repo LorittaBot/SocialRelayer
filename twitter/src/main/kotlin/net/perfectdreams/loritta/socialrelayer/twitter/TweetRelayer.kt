@@ -26,7 +26,6 @@ import twitter4j.TwitterFactory
 import twitter4j.conf.Configuration
 import twitter4j.conf.ConfigurationBuilder
 import java.util.concurrent.atomic.AtomicInteger
-import javax.swing.SortOrder
 import kotlin.concurrent.thread
 import kotlin.system.measureTimeMillis
 

@@ -119,13 +119,15 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                                 mostRecentTweet = result.tweets.firstOrNull()
                             }
 
+                            val recentTweetId = mostRecentTweet?.tweetId
+
                             jobs += GlobalScope.async {
                                 val newResult = check(trackerPolling)
 
                                 if (newResult is SuccessfulPollingResult) {
                                     for (tweet in newResult.tweets) {
                                         // logger.info { "${trackerPolling.screenName} last tweet was ${mostRecentTweet?.tweetId}, new tweet ID is ${tweet.tweetId}" }
-                                        if (tweet.tweetId == mostRecentTweet?.tweetId)
+                                        if (recentTweetId != null && recentTweetId >= tweet.tweetId)
                                             break
 
                                         trackerPolling.tweetRelayer.receivedNewTweet(

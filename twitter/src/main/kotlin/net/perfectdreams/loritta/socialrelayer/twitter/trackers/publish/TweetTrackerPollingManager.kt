@@ -240,7 +240,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                     result
                 }
             } catch (e: Exception) {
-                logger.warn(e) { "Exception while checking status via polling" }
+                logger.warn(e) { "Exception while checking ${ttpt.screenName}'s status via polling" }
                 null
             }
         }

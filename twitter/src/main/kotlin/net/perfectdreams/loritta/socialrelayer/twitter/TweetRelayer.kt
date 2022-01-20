@@ -155,6 +155,11 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             val rules = builder.builtRules
                 .take(25)
 
+            logger.info { "Created Stream V2 rules (${rules.size}):" }
+            for (rule in rules) {
+                logger.info { "Rule: $rule" }
+            }
+            
             val stream = tweetTrackerStreamv2 ?: TweetTrackerStream(this@TweetRelayer)
             // According to the docs, we don't need to create the stream again when updating the rules (yay?)
             stream.updateRules(rules)

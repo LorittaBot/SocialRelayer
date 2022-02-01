@@ -142,7 +142,7 @@ class WebhookManager(private val rest: RestClient, private val database: Databas
                         CachedDiscordWebhook.wrapRow(
                             CachedDiscordWebhooks.insertOrUpdate(CachedDiscordWebhooks.id) {
                                 it[id] = channelId
-                                it[webhookId] = webhook.id.value
+                                it[webhookId] = webhook.id.value.toLong()
                                 it[webhookToken] = webhook.token.value!! // I doubt that the token can be null so let's just force null, heh
                                 it[state] = WebhookState.SUCCESS
                                 it[updatedAt] = System.currentTimeMillis()

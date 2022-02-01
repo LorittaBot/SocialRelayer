@@ -19,7 +19,7 @@ import net.perfectdreams.loritta.socialrelayer.twitter.trackers.TrackerSource
 class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
     companion object {
         private val logger = KotlinLogging.logger {}
-        val http = HttpClient(CIO) {
+        val http = HttpClient {
             expectSuccess = false
         }
 

@@ -159,7 +159,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             for (rule in rules) {
                 logger.info { "Rule: $rule" }
             }
-            
+
             val stream = tweetTrackerStreamv2 ?: TweetTrackerStream(this@TweetRelayer)
             // According to the docs, we don't need to create the stream again when updating the rules (yay?)
             stream.updateRules(rules)

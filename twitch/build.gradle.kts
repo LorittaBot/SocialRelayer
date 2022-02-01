@@ -7,12 +7,6 @@ plugins {
 group = "net.perfectdreams.loritta.socialrelayer.twitch"
 version = "1.0.0"
 
-repositories {
-    maven("https://oss.sonatype.org/content/repositories/snapshots")
-    mavenCentral()
-    jcenter()
-}
-
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(project(":common"))

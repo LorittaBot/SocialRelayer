@@ -113,13 +113,13 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                         // logger.info { "Screen Name: ${trackerPolling.screenName}, should check now? ${shouldCheckNow}"}
                         if (shouldCheckNow) {
                             var wasSuccessful = false
-                            var mostRecentTweet: PolledTweet? = null
+                            var previousMostRecentTweet: PolledTweet? = null
                             if (result is SuccessfulPollingResult) {
                                 wasSuccessful = true
-                                mostRecentTweet = result.tweets.firstOrNull()
+                                previousMostRecentTweet = result.tweets.firstOrNull()
                             }
 
-                            val recentTweetId = mostRecentTweet?.tweetId
+                            val previousMostRecentTweetId = previousMostRecentTweet?.tweetId
 
                             jobs += GlobalScope.async {
                                 val newResult = check(trackerPolling)
@@ -127,7 +127,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                                 if (newResult is SuccessfulPollingResult) {
                                     for (tweet in newResult.tweets) {
                                         // logger.info { "${trackerPolling.screenName} last tweet was ${mostRecentTweet?.tweetId}, new tweet ID is ${tweet.tweetId}" }
-                                        if (recentTweetId != null && recentTweetId >= tweet.tweetId)
+                                        if (previousMostRecentTweetId != null && previousMostRecentTweetId >= tweet.tweetId)
                                             break
 
                                         trackerPolling.tweetRelayer.receivedNewTweet(

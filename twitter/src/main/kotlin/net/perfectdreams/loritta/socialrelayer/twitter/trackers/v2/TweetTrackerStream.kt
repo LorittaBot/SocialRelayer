@@ -28,6 +28,7 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
     }
 
     private val token = tweetRelayer.config.twitter.twitterV2Token
+    private var lastHeartbeat = Long.MIN_VALUE
 
     suspend fun updateRules(rules: List<CreatedRule>) {
         val response = http.get<String>("https://api.twitter.com/2/tweets/search/stream/rules") {
@@ -96,33 +97,41 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
     suspend fun start() {
         // Create the stream
         logger.info { "Starting the Stream!" }
-        val response = http.get<HttpStatement>("https://api.twitter.com/2/tweets/search/stream?expansions=author_id") {
+        http.get<HttpStatement>("https://api.twitter.com/2/tweets/search/stream?expansions=author_id") {
             header("Authorization", "Bearer $token")
         }.execute {
             // Response is not downloaded here.
             val channel = it.receive<ByteReadChannel>()
 
-            while (true) {
+            while (!channel.isClosedForRead) {
                 try {
-                    // If null then it means that the connection is closed
                     logger.info { "Inside the while true loop..." }
 
-                    val line = channel.readUTF8Line() ?: return@execute
+                    val line = channel.readUTF8Line()
+
+                    if (line == null) {
+                        // If null then it means that the connection is closed
+                        logger.info { "Received null line! The connection has been been closed!!" }
+                        break
+                    }
 
                     if (line.replace("\n", "").replace("\r", "").isEmpty()) {
                         // heart beat
-                        logger.info { "Received Heartbeat" }
+                        if (lastHeartbeat == Long.MIN_VALUE) {
+                            logger.info { "Received Heartbeat" }
+                        } else {
+                            logger.info { "Received Heartbeat - Last heartbeat was received ${System.currentTimeMillis() - lastHeartbeat}ms ago" }
+                        }
+                        lastHeartbeat = System.currentTimeMillis()
                         continue
                     }
 
-                    logger.info { line }
+                    logger.info { "Received data from Stream! $line" }
+
                     // {"data":{"id":"1346101396458844162","text":"RT @geert_talsma: @fionaantonella3 @t_leung Double Cat https://t.co/nSSlWNSdWl"},"matching_rules":[{"id":1346100829099581440,"tag":"cats with images"}]}
                     val data = Json.parseToJsonElement(line).jsonObject["data"]!!.jsonObject
                     val authorId = data["author_id"]!!.jsonPrimitive.content.toLong()
                     val tweetId = data["id"]!!.jsonPrimitive.content.toLong()
-
-                    // println(line)
-                    // println(tweetId)
 
                     tweetRelayer.receivedNewTweet(
                         TweetInfo(
@@ -134,9 +143,11 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
                     )
                 } catch (e: Exception) {
                     logger.warn(e) { "Something went wrong while processing stream!" }
-                    return@execute
+                    break
                 }
             }
+
+            logger.info { "Left while true loop! Is channel closed for read? ${channel.isClosedForRead}" }
         }
 
         logger.info { "Stream Finished... Waiting 30s until starting stream again..." }

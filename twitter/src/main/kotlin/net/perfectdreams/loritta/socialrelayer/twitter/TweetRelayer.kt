@@ -170,6 +170,8 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
                     stream.start()
                 }
                 tweetTrackerStreamv2 = stream
+            } else {
+
             }
 
             // Add overflowing users back to the list

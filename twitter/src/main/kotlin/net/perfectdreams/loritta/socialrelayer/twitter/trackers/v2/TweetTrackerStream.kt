@@ -108,7 +108,12 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
             http.get<HttpStatement>("https://api.twitter.com/2/tweets/search/stream?expansions=author_id") {
                 header("Authorization", "Bearer $token")
             }.execute {
-                logger.info { "Connected to Twitter Stream!" }
+                logger.info { "Connected to Twitter Stream! Status: ${it.status}" }
+
+                if (it.status == HttpStatusCode.TooManyRequests) {
+                    logger.warn { "It seems like we are sending too many requests to Twitter... Leaving request scope" }
+                    return@execute
+                }
 
                 // Response is not downloaded here.
                 val channel = it.receive<ByteReadChannel>()

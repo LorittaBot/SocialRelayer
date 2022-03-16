@@ -161,17 +161,21 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             }
 
             val stream = tweetTrackerStreamv2 ?: TweetTrackerStream(this@TweetRelayer)
-            // According to the docs, we don't need to create the stream again when updating the rules (yay?)
-            stream.updateRules(rules)
+            try {
+                // According to the docs, we don't need to create the stream again when updating the rules (yay?)
+                stream.updateRules(rules)
 
-            if (tweetTrackerStreamv2 == null) {
-                logger.info { "Tweet Tracker Stream V2 does not exist! Creating stream..." }
-                GlobalScope.launch {
-                    stream.start()
+                if (tweetTrackerStreamv2 == null) {
+                    logger.info { "Tweet Tracker Stream V2 does not exist! Creating stream..." }
+                    GlobalScope.launch {
+                        stream.start()
+                    }
+                    tweetTrackerStreamv2 = stream
+                } else {
+                    logger.info { "Tweet Tracker Stream V2 already exists! We will just not restart the stream then..." }
                 }
-                tweetTrackerStreamv2 = stream
-            } else {
-
+            } catch (e: Exception) {
+                logger.warn(e) { "Something went wrong while trying to update Tweet Tracker Stream V2 rules!" }
             }
 
             // Add overflowing users back to the list

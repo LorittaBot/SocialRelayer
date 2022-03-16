@@ -31,12 +31,17 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
     private var lastHeartbeat = Long.MIN_VALUE
 
     suspend fun updateRules(rules: List<CreatedRule>) {
-        val response = http.get<String>("https://api.twitter.com/2/tweets/search/stream/rules") {
+        logger.info { "Getting Tracked Twitter Stream V2 Rules..." }
+        val response = http.get<HttpResponse>("https://api.twitter.com/2/tweets/search/stream/rules") {
             header("Authorization", "Bearer $token")
         }
 
-        val currentTrackedRules = Json.decodeFromJsonElement(ListSerializer(StreamRule.serializer()), Json.parseToJsonElement(response).jsonObject.get("data") ?: buildJsonArray {})
+        val rulePayload = response.readText(Charsets.UTF_8)
+
+        val currentTrackedRules = Json.decodeFromJsonElement(ListSerializer(StreamRule.serializer()), Json.parseToJsonElement(rulePayload).jsonObject.get("data") ?: buildJsonArray {})
             .sortedBy { it.tag }
+
+        logger.info { "Current Tracked Twitter Stream V2 Rules: $currentTrackedRules" }
 
         // Now we need to build the new rules, if any of them doesn't match, we are going to replace them
         var needsUpdate = currentTrackedRules.size != rules.size
@@ -96,7 +101,7 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
 
     suspend fun start() {
         lastHeartbeat = Long.MIN_VALUE
-        
+
         // Create the stream
         logger.info { "Starting the Twitter Stream!" }
         try {

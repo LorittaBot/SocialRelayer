@@ -2,6 +2,7 @@ package net.perfectdreams.loritta.socialrelayer.twitter.trackers.v2
 
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.apache.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -19,7 +20,7 @@ import net.perfectdreams.loritta.socialrelayer.twitter.trackers.TrackerSource
 class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
     companion object {
         private val logger = KotlinLogging.logger {}
-        val http = HttpClient {
+        val http = HttpClient(Apache) {
             expectSuccess = false
         }
 

@@ -18,7 +18,7 @@ import java.time.LocalDateTime
  */
 class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val screenName: String) {
     companion object {
-        val http = HttpClient {
+        val http = HttpClient(Apache) {
             expectSuccess = false
         }
 

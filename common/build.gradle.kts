@@ -23,7 +23,7 @@ dependencies {
     api("pw.forst:exposed-upsert:1.1.0")
 
     api("io.ktor:ktor-client-core:${Versions.KTOR}")
-    api("io.ktor:ktor-client-java:${Versions.KTOR}")
+    api("io.ktor:ktor-client-apache:${Versions.KTOR}")
 
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.KOTLIN_SERIALIZATION}")
     api("org.jetbrains.kotlinx:kotlinx-serialization-hocon:${Versions.KOTLIN_SERIALIZATION}")

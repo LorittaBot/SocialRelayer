@@ -30,7 +30,7 @@ class TwitchAPI(val clientId: String,
         private const val TOKEN_BASE_URL = "$PREFIX/oauth2/token"
         private const val USER_AGENT = "SocialRelayer-Loritta-Morenitta-Twitch-Auth/1.0"
         private val logger = KotlinLogging.logger {}
-        val http = HttpClient {
+        val http = HttpClient(Apache) {
             this.expectSuccess = false
         }
     }

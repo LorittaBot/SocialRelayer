@@ -1,6 +1,7 @@
 package net.perfectdreams.loritta.socialrelayer.twitter.trackers.publish
 
 import io.ktor.client.*
+import io.ktor.client.engine.apache.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

@@ -101,10 +101,14 @@ class TwitchAPI(val clientId: String,
             }
         } catch (e: RateLimitedException) {
             logger.info { "rate limited exception! locked? ${mutex.isLocked}" }
-            return doStuff(checkForRefresh, callback)
+            doStuff(checkForRefresh, callback)
         } catch (e: NeedsRefreshException) {
             logger.info { "refresh exception!" }
             refreshToken()
+            doStuff(checkForRefresh, callback)
+        } catch (e: TokenUnauthorizedException) {
+            logger.info { "Unauthorized token exception! Doing token exchange again and retrying..." }
+            doTokenExchange()
             doStuff(checkForRefresh, callback)
         }
     }

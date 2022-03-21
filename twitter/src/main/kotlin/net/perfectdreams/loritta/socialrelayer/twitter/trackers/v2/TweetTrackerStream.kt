@@ -16,11 +16,24 @@ import mu.KotlinLogging
 import net.perfectdreams.loritta.socialrelayer.twitter.TweetInfo
 import net.perfectdreams.loritta.socialrelayer.twitter.TweetRelayer
 import net.perfectdreams.loritta.socialrelayer.twitter.trackers.TrackerSource
+import org.apache.http.HttpEntity
+import org.apache.http.client.config.CookieSpecs
+import org.apache.http.client.config.RequestConfig
+import org.apache.http.client.methods.CloseableHttpResponse
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.utils.URIBuilder
+import org.apache.http.impl.client.HttpClients
+import java.io.BufferedReader
+import java.io.InputStreamReader
+
 
 class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
     companion object {
         private val logger = KotlinLogging.logger {}
         val http = HttpClient(Apache) {
+            expectSuccess = false
+        }
+        val streamHttp = HttpClient(Apache) {
             expectSuccess = false
         }
 
@@ -106,65 +119,82 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
         // Create the stream
         logger.info { "Starting the Twitter Stream!" }
         try {
-            http.get<HttpStatement>("https://api.twitter.com/2/tweets/search/stream?expansions=author_id") {
-                header("Authorization", "Bearer $token")
-            }.execute {
-                logger.info { "Connected to Twitter Stream! Status: ${it.status}" }
+            // From https://github.com/twitterdev/Twitter-API-v2-sample-code/blob/main/Filtered-Stream/FilteredStreamDemo.java#L43
+            // Because we were having issues of "connection timeout" or "unexpected chunk size" when the connection was trying to reconnect, I tried
+            // copying the code from Twitter's sample code
+            // So if it is broken... then it is their own fault!
+            HttpClients.custom()
+                .setDefaultRequestConfig(
+                    RequestConfig.custom()
+                        .setCookieSpec(CookieSpecs.STANDARD).build()
+                )
+                .build()
+                .use { httpClient ->
+                    val uriBuilder = URIBuilder("https://api.twitter.com/2/tweets/search/stream")
+                        .addParameter("expansions", "author_id")
 
-                if (it.status == HttpStatusCode.TooManyRequests) {
-                    logger.warn { "It seems like we are sending too many requests to Twitter... Leaving request scope" }
-                    return@execute
-                }
+                    val httpGet = HttpGet(uriBuilder.build())
+                    httpGet.setHeader("Authorization", java.lang.String.format("Bearer %s", token))
 
-                // Response is not downloaded here.
-                val channel = it.receive<ByteReadChannel>()
+                    val response = httpClient.execute(httpGet)
+                    if (response.statusLine.statusCode == HttpStatusCode.TooManyRequests.value) {
+                        logger.warn { "It seems like we are sending too many requests to Twitter... Leaving request scope" }
+                    } else {
+                        val entity: HttpEntity? = response.entity
 
-                while (!channel.isClosedForRead) {
-                    try {
-                        logger.info { "Inside the while true loop..." }
+                        if (entity != null) {
+                            logger.info { "Connected to Twitter Stream! Status: ${response.statusLine.statusCode}" }
+                            val reader = BufferedReader(InputStreamReader(entity.content))
+                            reader.use {
+                                while (true) {
+                                    try {
+                                        logger.info { "Inside the while true loop..." }
+                                        val line = reader.readLine()
 
-                        val line = channel.readUTF8Line()
+                                        if (line == null) {
+                                            logger.info { "Received null line! The connection has been been closed!!" }
+                                            break
+                                        }
 
-                        if (line == null) {
-                            // If null then it means that the connection is closed
-                            logger.info { "Received null line! The connection has been been closed!!" }
-                            break
-                        }
+                                        if (line.replace("\n", "").replace("\r", "").isEmpty()) {
+                                            // heart beat
+                                            if (lastHeartbeat == Long.MIN_VALUE) {
+                                                logger.info { "Received Heartbeat" }
+                                            } else {
+                                                logger.info { "Received Heartbeat - Last heartbeat was received ${System.currentTimeMillis() - lastHeartbeat}ms ago" }
+                                            }
+                                            lastHeartbeat = System.currentTimeMillis()
+                                            continue
+                                        }
 
-                        if (line.replace("\n", "").replace("\r", "").isEmpty()) {
-                            // heart beat
-                            if (lastHeartbeat == Long.MIN_VALUE) {
-                                logger.info { "Received Heartbeat" }
-                            } else {
-                                logger.info { "Received Heartbeat - Last heartbeat was received ${System.currentTimeMillis() - lastHeartbeat}ms ago" }
+                                        logger.info { "Received data from Stream! $line" }
+
+                                        // {"data":{"id":"1346101396458844162","text":"RT @geert_talsma: @fionaantonella3 @t_leung Double Cat https://t.co/nSSlWNSdWl"},"matching_rules":[{"id":1346100829099581440,"tag":"cats with images"}]}
+                                        val data = Json.parseToJsonElement(line).jsonObject["data"]!!.jsonObject
+                                        val authorId = data["author_id"]!!.jsonPrimitive.content.toLong()
+                                        val tweetId = data["id"]!!.jsonPrimitive.content.toLong()
+
+                                        tweetRelayer.receivedNewTweet(
+                                            TweetInfo(
+                                                TrackerSource.v2_STREAM,
+                                                authorId,
+                                                tweetRelayer.retrieveTwitterAccountDataFromDatabaseById(authorId)?.screenName
+                                                    ?: "x",
+                                                tweetId
+                                            )
+                                        )
+                                    } catch (e: Exception) {
+                                        logger.warn(e) { "Something went wrong while processing stream!" }
+                                        continue
+                                    }
+                                }
                             }
-                            lastHeartbeat = System.currentTimeMillis()
-                            continue
+                            logger.info { "Left while true loop!" }
+                        } else {
+                            logger.warn { "HttpEntity is null! Bug? Status code: ${response.statusLine.statusCode}" }
                         }
-
-                        logger.info { "Received data from Stream! $line" }
-
-                        // {"data":{"id":"1346101396458844162","text":"RT @geert_talsma: @fionaantonella3 @t_leung Double Cat https://t.co/nSSlWNSdWl"},"matching_rules":[{"id":1346100829099581440,"tag":"cats with images"}]}
-                        val data = Json.parseToJsonElement(line).jsonObject["data"]!!.jsonObject
-                        val authorId = data["author_id"]!!.jsonPrimitive.content.toLong()
-                        val tweetId = data["id"]!!.jsonPrimitive.content.toLong()
-
-                        tweetRelayer.receivedNewTweet(
-                            TweetInfo(
-                                TrackerSource.v2_STREAM,
-                                authorId,
-                                tweetRelayer.retrieveTwitterAccountDataFromDatabaseById(authorId)?.screenName ?: "x",
-                                tweetId
-                            )
-                        )
-                    } catch (e: Exception) {
-                        logger.warn(e) { "Something went wrong while processing stream!" }
-                        break
                     }
                 }
-
-                logger.info { "Left while true loop! Is channel closed for read? ${channel.isClosedForRead}" }
-            }
         } catch (e: Exception) {
             logger.info(e) { "Something went wrong while trying to connect to Twitter Stream v2..." }
         }

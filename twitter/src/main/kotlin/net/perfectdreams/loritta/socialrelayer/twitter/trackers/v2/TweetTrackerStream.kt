@@ -16,6 +16,7 @@ import mu.KotlinLogging
 import net.perfectdreams.loritta.socialrelayer.twitter.TweetInfo
 import net.perfectdreams.loritta.socialrelayer.twitter.TweetRelayer
 import net.perfectdreams.loritta.socialrelayer.twitter.trackers.TrackerSource
+import net.perfectdreams.loritta.socialrelayer.twitter.trackers.v2.TweetTrackerStream.Companion.MAX_RULE_LENGTH
 import org.apache.http.HttpEntity
 import org.apache.http.client.config.CookieSpecs
 import org.apache.http.client.config.RequestConfig
@@ -24,6 +25,7 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.impl.client.HttpClients
 import java.io.BufferedReader
+import java.io.EOFException
 import java.io.InputStreamReader
 
 
@@ -183,7 +185,10 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
                                                 tweetId
                                             )
                                         )
-                                    } catch (e: Exception) {
+                                    } catch (e: EOFException) {
+                                        logger.warn(e) { "EOFException while processing stream! Leaving while true..." }
+                                        break
+                                    }  catch (e: Exception) {
                                         logger.warn(e) { "Something went wrong while processing stream!" }
                                         continue
                                     }

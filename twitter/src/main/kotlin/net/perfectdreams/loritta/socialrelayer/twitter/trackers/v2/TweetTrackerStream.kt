@@ -23,10 +23,13 @@ import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.CloseableHttpResponse
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.utils.URIBuilder
+import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClients
 import java.io.BufferedReader
 import java.io.EOFException
+import java.io.IOException
 import java.io.InputStreamReader
+import kotlin.concurrent.thread
 
 
 class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
@@ -125,81 +128,103 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
             // Because we were having issues of "connection timeout" or "unexpected chunk size" when the connection was trying to reconnect, I tried
             // copying the code from Twitter's sample code
             // So if it is broken... then it is their own fault!
-            HttpClients.custom()
+            val httpClient = HttpClients.custom()
                 .setDefaultRequestConfig(
                     RequestConfig.custom()
                         .setCookieSpec(CookieSpecs.STANDARD).build()
                 )
                 .build()
-                .use { httpClient ->
-                    val uriBuilder = URIBuilder("https://api.twitter.com/2/tweets/search/stream")
-                        .addParameter("expansions", "author_id")
 
-                    val httpGet = HttpGet(uriBuilder.build())
-                    httpGet.setHeader("Authorization", java.lang.String.format("Bearer %s", token))
+            var isActive = true
 
-                    val response = httpClient.execute(httpGet)
-                    if (response.statusLine.statusCode == HttpStatusCode.TooManyRequests.value) {
-                        logger.warn { "It seems like we are sending too many requests to Twitter... Leaving request scope" }
-                    } else {
-                        val entity: HttpEntity? = response.entity
+            val thread = thread {
+                while (isActive) {
+                    if (lastHeartbeat != Long.MIN_VALUE) {
+                        val hb = lastHeartbeat - System.currentTimeMillis()
+                        logger.info { "Last stream heartbeat happened ${hb}ms ago"}
 
-                        if (entity != null) {
-                            logger.info { "Connected to Twitter Stream! Status: ${response.statusLine.statusCode}" }
-                            val reader = BufferedReader(InputStreamReader(entity.content))
-                            reader.use {
-                                while (true) {
-                                    try {
-                                        logger.info { "Inside the while true loop..." }
-                                        val line = reader.readLine()
-
-                                        if (line == null) {
-                                            logger.info { "Received null line! The connection has been been closed!!" }
-                                            break
-                                        }
-
-                                        if (line.replace("\n", "").replace("\r", "").isEmpty()) {
-                                            // heart beat
-                                            if (lastHeartbeat == Long.MIN_VALUE) {
-                                                logger.info { "Received Heartbeat" }
-                                            } else {
-                                                logger.info { "Received Heartbeat - Last heartbeat was received ${System.currentTimeMillis() - lastHeartbeat}ms ago" }
-                                            }
-                                            lastHeartbeat = System.currentTimeMillis()
-                                            continue
-                                        }
-
-                                        logger.info { "Received data from Stream! $line" }
-
-                                        // {"data":{"id":"1346101396458844162","text":"RT @geert_talsma: @fionaantonella3 @t_leung Double Cat https://t.co/nSSlWNSdWl"},"matching_rules":[{"id":1346100829099581440,"tag":"cats with images"}]}
-                                        val data = Json.parseToJsonElement(line).jsonObject["data"]!!.jsonObject
-                                        val authorId = data["author_id"]!!.jsonPrimitive.content.toLong()
-                                        val tweetId = data["id"]!!.jsonPrimitive.content.toLong()
-
-                                        tweetRelayer.receivedNewTweet(
-                                            TweetInfo(
-                                                TrackerSource.v2_STREAM,
-                                                authorId,
-                                                tweetRelayer.retrieveTwitterAccountDataFromDatabaseById(authorId)?.screenName
-                                                    ?: "x",
-                                                tweetId
-                                            )
-                                        )
-                                    } catch (e: EOFException) {
-                                        logger.warn(e) { "EOFException while processing stream! Leaving while true..." }
-                                        break
-                                    }  catch (e: Exception) {
-                                        logger.warn(e) { "Something went wrong while processing stream!" }
-                                        continue
-                                    }
-                                }
-                            }
-                            logger.info { "Left while true loop!" }
-                        } else {
-                            logger.warn { "HttpEntity is null! Bug? Status code: ${response.statusLine.statusCode}" }
+                        // Every heartbeat should happen every 30s
+                        if (hb >= 30_000) {
+                            logger.info { "Stream heartbeat happened ${hb}ms ago! Closing HttpClient..."}
+                            httpClient.close()
                         }
                     }
+
+                    Thread.sleep(1_000)
                 }
+            }
+
+            val uriBuilder = URIBuilder("https://api.twitter.com/2/tweets/search/stream")
+                .addParameter("expansions", "author_id")
+
+            val httpGet = HttpGet(uriBuilder.build())
+            httpGet.setHeader("Authorization", java.lang.String.format("Bearer %s", token))
+
+            val response = httpClient.execute(httpGet)
+            if (response.statusLine.statusCode == HttpStatusCode.TooManyRequests.value) {
+                logger.warn { "It seems like we are sending too many requests to Twitter... Leaving request scope" }
+            } else {
+                val entity: HttpEntity? = response.entity
+
+                if (entity != null) {
+                    logger.info { "Connected to Twitter Stream! Status: ${response.statusLine.statusCode}" }
+                    val reader = BufferedReader(InputStreamReader(entity.content))
+                    reader.use {
+                        while (true) {
+                            try {
+                                logger.info { "Inside the while true loop..." }
+                                val line = reader.readLine()
+
+                                if (line == null) {
+                                    logger.info { "Received null line! The connection has been closed!!" }
+                                    break
+                                }
+
+                                if (line.replace("\n", "").replace("\r", "").isEmpty()) {
+                                    // heart beat
+                                    if (lastHeartbeat == Long.MIN_VALUE) {
+                                        logger.info { "Received Heartbeat" }
+                                    } else {
+                                        logger.info { "Received Heartbeat - Last heartbeat was received ${System.currentTimeMillis() - lastHeartbeat}ms ago" }
+                                    }
+                                    lastHeartbeat = System.currentTimeMillis()
+                                    continue
+                                }
+
+                                logger.info { "Received data from Stream! $line" }
+
+                                // {"data":{"id":"1346101396458844162","text":"RT @geert_talsma: @fionaantonella3 @t_leung Double Cat https://t.co/nSSlWNSdWl"},"matching_rules":[{"id":1346100829099581440,"tag":"cats with images"}]}
+                                val data = Json.parseToJsonElement(line).jsonObject["data"]!!.jsonObject
+                                val authorId = data["author_id"]!!.jsonPrimitive.content.toLong()
+                                val tweetId = data["id"]!!.jsonPrimitive.content.toLong()
+
+                                tweetRelayer.receivedNewTweet(
+                                    TweetInfo(
+                                        TrackerSource.v2_STREAM,
+                                        authorId,
+                                        tweetRelayer.retrieveTwitterAccountDataFromDatabaseById(authorId)?.screenName ?: "x",
+                                        tweetId
+                                    )
+                                )
+                            } catch (e: IOException) {
+                                logger.warn(e) { "IOException while processing stream! Leaving while true..." }
+                                break
+                            } catch (e: EOFException) {
+                                logger.warn(e) { "EOFException while processing stream! Leaving while true..." }
+                                break
+                            }  catch (e: Exception) {
+                                logger.warn(e) { "Something went wrong while processing stream!" }
+                                continue
+                            }
+                        }
+                    }
+                    logger.info { "Left while true loop!" }
+                } else {
+                    logger.warn { "HttpEntity is null! Bug? Status code: ${response.statusLine.statusCode}" }
+                }
+            }
+
+            isActive = false
         } catch (e: Exception) {
             logger.info(e) { "Something went wrong while trying to connect to Twitter Stream v2..." }
         }

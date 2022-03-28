@@ -137,17 +137,19 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
 
             var isActive = true
 
-            val thread = thread {
+            thread {
                 while (isActive) {
                     if (lastHeartbeat != Long.MIN_VALUE) {
-                        val hb = lastHeartbeat - System.currentTimeMillis()
-                        logger.info { "Last stream heartbeat happened ${hb}ms ago"}
+                        val hb = System.currentTimeMillis() - lastHeartbeat
+                        logger.info { "Last stream heartbeat happened ${hb}ms ago" }
 
-                        // Every heartbeat should happen every 30s
+                        // Every heartbeat should happen every 20s, so if a heartbeat took more than 30s to be received, then we will close the stream
                         if (hb >= 30_000) {
-                            logger.info { "Stream heartbeat happened ${hb}ms ago! Closing HttpClient..."}
+                            logger.info { "Stream heartbeat happened ${hb}ms ago! Closing HttpClient..." }
                             httpClient.close()
                         }
+                    } else {
+                        logger.info { "Checking for heartbeat failed because we haven't received a heartbeat check yet" }
                     }
 
                     Thread.sleep(1_000)

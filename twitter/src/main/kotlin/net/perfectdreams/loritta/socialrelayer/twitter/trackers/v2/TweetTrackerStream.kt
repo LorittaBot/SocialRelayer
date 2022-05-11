@@ -6,6 +6,7 @@ import io.ktor.client.engine.apache.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.client.utils.EmptyContent.contentType
 import io.ktor.http.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.delay
@@ -38,9 +39,6 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
         val http = HttpClient(Apache) {
             expectSuccess = false
         }
-        val streamHttp = HttpClient(Apache) {
-            expectSuccess = false
-        }
 
         const val MAX_RULE_LENGTH = 512
         const val MAX_RULES = 25
@@ -51,11 +49,11 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
 
     suspend fun updateRules(rules: List<CreatedRule>) {
         logger.info { "Getting Tracked Twitter Stream V2 Rules..." }
-        val response = http.get<HttpResponse>("https://api.twitter.com/2/tweets/search/stream/rules") {
+        val response = http.get("https://api.twitter.com/2/tweets/search/stream/rules") {
             header("Authorization", "Bearer $token")
         }
 
-        val rulePayload = response.readText(Charsets.UTF_8)
+        val rulePayload = response.bodyAsText(Charsets.UTF_8)
 
         val currentTrackedRules = Json.decodeFromJsonElement(ListSerializer(StreamRule.serializer()), Json.parseToJsonElement(rulePayload).jsonObject.get("data") ?: buildJsonArray {})
             .sortedBy { it.tag }
@@ -78,38 +76,42 @@ class TweetTrackerStream(val tweetRelayer: TweetRelayer) {
         if (needsUpdate) {
             logger.info { "Deleting existing stream rules..." }
             // Remove all existing rules
-            val deletionResponse = http.post<String>("https://api.twitter.com/2/tweets/search/stream/rules") {
+            val deletionResponse = http.post("https://api.twitter.com/2/tweets/search/stream/rules") {
                 header("Authorization", "Bearer $token")
                 contentType(ContentType.Application.Json)
 
-                body = buildJsonObject {
-                    putJsonObject("delete") {
-                        putJsonArray("ids") {
-                            for (rule in currentTrackedRules) {
-                                add(rule.id)
+                setBody(
+                    buildJsonObject {
+                        putJsonObject("delete") {
+                            putJsonArray("ids") {
+                                for (rule in currentTrackedRules) {
+                                    add(rule.id)
+                                }
                             }
                         }
-                    }
-                }.toString()
-            }
+                    }.toString()
+                )
+            }.bodyAsText()
 
             // And then create them again!
             logger.info { "Creating new stream rules..." }
-            val creationResponse = http.post<String>("https://api.twitter.com/2/tweets/search/stream/rules") {
+            val creationResponse = http.post("https://api.twitter.com/2/tweets/search/stream/rules") {
                 header("Authorization", "Bearer $token")
                 contentType(ContentType.Application.Json)
 
-                body = buildJsonObject {
-                    putJsonArray("add") {
-                        for ((index, rule) in rules.withIndex()) {
-                            addJsonObject {
-                                put("value", rule.value)
-                                put("tag", "Loritta Stream Rule #${index + 1}")
+                setBody(
+                    buildJsonObject {
+                        putJsonArray("add") {
+                            for ((index, rule) in rules.withIndex()) {
+                                addJsonObject {
+                                    put("value", rule.value)
+                                    put("tag", "Loritta Stream Rule #${index + 1}")
+                                }
                             }
                         }
-                    }
-                }.toString()
-            }
+                    }.toString()
+                )
+            }.bodyAsText()
 
             logger.info  { "Rules were successfully updated!" }
             logger.debug { "Creation Response: $creationResponse" }

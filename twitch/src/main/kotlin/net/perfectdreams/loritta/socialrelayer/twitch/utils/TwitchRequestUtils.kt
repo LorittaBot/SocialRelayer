@@ -1,11 +1,11 @@
 package net.perfectdreams.loritta.socialrelayer.twitch.utils
 
-import io.ktor.application.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.content.*
 import io.ktor.http.*
-import io.ktor.request.*
+import io.ktor.server.application.*
+import io.ktor.server.request.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -87,7 +87,7 @@ object TwitchRequestUtils {
             if (cursor != null)
                 parameter("after", cursor)
         }
-            .readText()
+            .bodyAsText()
             .let { Json.decodeFromString(it) }
     }
 
@@ -101,8 +101,7 @@ object TwitchRequestUtils {
         twitch.makeTwitchApiRequest("https://api.twitch.tv/helix/eventsub/subscriptions") {
             method = HttpMethod.Post
 
-            body = TextContent(
-                Json.encodeToString(subscriptionRequest), ContentType.Application.Json)
+            setBody(TextContent(Json.encodeToString(subscriptionRequest), ContentType.Application.Json))
         }
     }
 }

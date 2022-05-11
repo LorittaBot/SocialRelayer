@@ -2,9 +2,9 @@ package net.perfectdreams.loritta.socialrelayer.twitch
 
 import club.minnced.discord.webhook.WebhookClientBuilder
 import dev.kord.rest.service.RestClient
-import io.ktor.application.*
-import io.ktor.response.*
-import io.ktor.routing.*
+import io.ktor.server.application.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import net.perfectdreams.loritta.socialrelayer.common.utils.DatabaseUtils

@@ -3,6 +3,7 @@ package net.perfectdreams.loritta.socialrelayer.twitter.trackers.publish
 import io.ktor.client.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -32,9 +33,9 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
     suspend fun check(): PollingResult {
         // logger.info { "Polling $screenName's Timeline..." }
         val aaa = withContext(Dispatchers.IO) {
-            http.get<String>("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false") {
+            http.get("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false") {
                 header("Referer", "https://htmledit.squarefree.com/")
-            }
+            }.bodyAsText()
         }
 
         val json = Json.parseToJsonElement(

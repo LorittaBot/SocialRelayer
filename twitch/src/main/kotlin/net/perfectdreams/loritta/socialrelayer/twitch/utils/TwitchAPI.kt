@@ -48,12 +48,12 @@ class TwitchAPI(val clientId: String,
         }
 
         return doStuff(checkForRefresh = false) {
-            val result = http.post<String> {
+            val result = http.post {
                 url(TOKEN_BASE_URL)
                 userAgent(USER_AGENT)
 
-                body = TextContent(parameters.formUrlEncode(), ContentType.Application.FormUrlEncoded)
-            }
+                setBody(TextContent(parameters.formUrlEncode(), ContentType.Application.FormUrlEncoded))
+            }.bodyAsText()
 
             logger.info { result }
 

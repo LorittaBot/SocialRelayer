@@ -2,10 +2,10 @@ package net.perfectdreams.loritta.socialrelayer.twitch.routes.api.v1.callbacks
 
 import club.minnced.discord.webhook.send.AllowedMentions
 import club.minnced.discord.webhook.send.WebhookMessageBuilder
-import io.ktor.application.*
+import io.ktor.server.application.*
 import io.ktor.http.*
-import io.ktor.request.*
-import io.ktor.response.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.future.await
@@ -14,12 +14,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import mu.KotlinLogging
 import net.perfectdreams.loritta.socialrelayer.common.utils.Constants
 import net.perfectdreams.loritta.socialrelayer.common.utils.MessageUtils
 import net.perfectdreams.loritta.socialrelayer.twitch.TwitchRelayer
-import net.perfectdreams.loritta.socialrelayer.twitch.data.SubscriptionData
 import net.perfectdreams.loritta.socialrelayer.twitch.data.VerificationRequest
 import net.perfectdreams.loritta.socialrelayer.twitch.data.events.TwitchEventRequest
 import net.perfectdreams.loritta.socialrelayer.twitch.data.events.TwitchStreamOnlineEventRequest
@@ -27,7 +25,6 @@ import net.perfectdreams.loritta.socialrelayer.twitch.tables.TrackedTwitchAccoun
 import net.perfectdreams.loritta.socialrelayer.twitch.tables.TwitchEventSubEvents
 import net.perfectdreams.loritta.socialrelayer.twitch.utils.TwitchRequestUtils
 import net.perfectdreams.sequins.ktor.BaseRoute
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction

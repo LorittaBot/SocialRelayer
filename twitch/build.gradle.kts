@@ -11,10 +11,10 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation(project(":common"))
 
-    implementation("net.perfectdreams.sequins.ktor:base-route:1.0.2")
     implementation("com.github.ben-manes.caffeine:caffeine:3.0.2")
     implementation("io.ktor:ktor-server-core:${Versions.KTOR}")
     implementation("io.ktor:ktor-server-netty:${Versions.KTOR}")
+    implementation("net.perfectdreams.sequins.ktor:base-route:1.0.4")
 }
 
 jib {

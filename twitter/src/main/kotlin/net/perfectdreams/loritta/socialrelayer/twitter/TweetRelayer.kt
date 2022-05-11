@@ -131,7 +131,46 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
 
             copy = copy.drop(10_000)
 
-            val builder = TweetTrackerStream.RuleListBuilder()
+            // TODO: I'm not sure but Twitter Stream v2 ALWAYS RANDOMLY FAILS!! It never reconnects
+            // And this annoys me so much :(
+            // Something went wrong while trying to connect to Twitter Stream v2...
+            //java.io.IOException: chunked transfer encoding, state: READING_LENGTH
+            //	at java.net.http/jdk.internal.net.http.common.Utils.wrapWithExtraDetail(Utils.java:337)
+            //	at java.net.http/jdk.internal.net.http.Http1Response$BodyReader.onReadError(Http1Response.java:759)
+            //	at java.net.http/jdk.internal.net.http.Http1AsyncReceiver.checkForErrors(Http1AsyncReceiver.java:302)
+            //	at java.net.http/jdk.internal.net.http.Http1AsyncReceiver.flush(Http1AsyncReceiver.java:268)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$SynchronizedRestartableTask.run(SequentialScheduler.java:175)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$CompleteRestartableTask.run(SequentialScheduler.java:147)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$SchedulableTask.run(SequentialScheduler.java:198)
+            //	at java.net.http/jdk.internal.net.http.HttpClientImpl$DelegatingExecutor.execute(HttpClientImpl.java:155)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler.runOrSchedule(SequentialScheduler.java:273)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler.runOrSchedule(SequentialScheduler.java:242)
+            //	at java.net.http/jdk.internal.net.http.Http1AsyncReceiver.onReadError(Http1AsyncReceiver.java:511)
+            //	at java.net.http/jdk.internal.net.http.Http1AsyncReceiver$Http1TubeSubscriber.onComplete(Http1AsyncReceiver.java:596)
+            //	at java.net.http/jdk.internal.net.http.common.SSLTube$DelegateWrapper.onComplete(SSLTube.java:276)
+            //	at java.net.http/jdk.internal.net.http.common.SSLTube$SSLSubscriberWrapper.complete(SSLTube.java:440)
+            //	at java.net.http/jdk.internal.net.http.common.SSLTube$SSLSubscriberWrapper.onComplete(SSLTube.java:541)
+            //	at java.net.http/jdk.internal.net.http.common.SubscriberWrapper.checkCompletion(SubscriberWrapper.java:472)
+            //	at java.net.http/jdk.internal.net.http.common.SubscriberWrapper$DownstreamPusher.run1(SubscriberWrapper.java:334)
+            //	at java.net.http/jdk.internal.net.http.common.SubscriberWrapper$DownstreamPusher.run(SubscriberWrapper.java:259)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$SynchronizedRestartableTask.run(SequentialScheduler.java:175)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$CompleteRestartableTask.run(SequentialScheduler.java:147)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$SchedulableTask.run(SequentialScheduler.java:198)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler.runOrSchedule(SequentialScheduler.java:271)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler.runOrSchedule(SequentialScheduler.java:224)
+            //	at java.net.http/jdk.internal.net.http.common.SubscriberWrapper.outgoing(SubscriberWrapper.java:232)
+            //	at java.net.http/jdk.internal.net.http.common.SSLFlowDelegate$Reader.processData(SSLFlowDelegate.java:513)
+            //	at java.net.http/jdk.internal.net.http.common.SSLFlowDelegate$Reader$ReaderDownstreamPusher.run(SSLFlowDelegate.java:268)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$SynchronizedRestartableTask.run(SequentialScheduler.java:175)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$CompleteRestartableTask.run(SequentialScheduler.java:147)
+            //	at java.net.http/jdk.internal.net.http.common.SequentialScheduler$SchedulableTask.run(SequentialScheduler.java:198)
+            //	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130)
+            //	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630)
+            //	at java.base/java.lang.Thread.run(Thread.java:832)
+            //Caused by: java.io.EOFException: EOF reached while reading
+            //	... 21 common frames omitted
+            // So we disabled the V2 Tweet Stream for now
+            /* val builder = TweetTrackerStream.RuleListBuilder()
             while (TweetTrackerStream.MAX_RULES >= builder.builtRules.size) {
                 val oneHundred = copy.take(100)
                 copy = copy.drop(100)
@@ -179,7 +218,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             }
 
             // Add overflowing users back to the list
-            copy = builder.builtRules.drop(25).flatMap { it.userId } + copy
+            copy = builder.builtRules.drop(25).flatMap { it.userId } + copy */
 
             logger.info { "Polling: ${copy.size}" }
 

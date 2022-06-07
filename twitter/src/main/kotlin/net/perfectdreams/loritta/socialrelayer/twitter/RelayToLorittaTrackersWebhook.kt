@@ -19,7 +19,6 @@ class RelayToLorittaTrackersWebhook(val tweetRelayer: TweetRelayer) {
         private val logger = KotlinLogging.logger {}
     }
 
-    @OptIn(ExperimentalTime::class)
     fun receivedNewTweet(tweetInfo: TweetInfo) {
         GlobalScope.launch {
             try {

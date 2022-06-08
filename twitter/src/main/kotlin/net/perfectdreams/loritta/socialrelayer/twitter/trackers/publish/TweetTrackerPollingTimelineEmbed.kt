@@ -54,7 +54,7 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
         val polledTweets = mutableListOf<PolledTweet>()
 
         if (statusCode == 200) {
-            if (pollingBody == "\n") {
+            if (json["body"]!!.jsonPrimitive.content == "\n") {
                 logger.info { "No new tweets were found when polling $screenName's timeline, so we will return a noop result..." }
                 return NoopPollingResult(statusCode, System.currentTimeMillis())
             }

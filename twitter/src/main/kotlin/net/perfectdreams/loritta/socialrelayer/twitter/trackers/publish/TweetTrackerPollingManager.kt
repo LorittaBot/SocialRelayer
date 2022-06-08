@@ -42,6 +42,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                     logger.info { "Checking accounts to be polled... There are ${trackerPollings.size} tracked polling accounts!" }
 
                     val jobs = mutableListOf<Deferred<*>>()
+                    val screenNamesToBePolled = mutableSetOf<String>()
 
                     // First
                     for ((trackerPolling, result) in trackerPollings) {
@@ -117,6 +118,8 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                             logger.info { "Screen Name: ${trackerPolling.screenName}, should check now? $shouldCheckNow" }
 
                             if (shouldCheckNow) {
+                                screenNamesToBePolled.add(trackerPolling.screenName)
+
                                 var wasSuccessful = false
                                 var previousMostRecentUserTweet: PolledUserTweet? = null
                                 var previousMostRecentTweet: PolledTweet? = null
@@ -158,10 +161,10 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                         }
                     }
 
-                    logger.info { "Polling ${jobs.size} users' timelines..." }
+                    logger.info { "Polling ${jobs.size} users' timelines... Screen Names to be polled: $screenNamesToBePolled" }
                     jobs.awaitAll()
                     val finish = System.currentTimeMillis()
-                    logger.info { "Finished polling ${jobs.size} users' timelines! Took ${finish - start}ms" }
+                    logger.info { "Finished polling ${jobs.size} users' timelines! Took ${finish - start}ms - Polled Screen Names: $screenNamesToBePolled" }
 
                     printStats()
                 } catch (e: Throwable) {

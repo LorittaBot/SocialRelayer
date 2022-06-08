@@ -54,7 +54,8 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
         val polledTweets = mutableListOf<PolledTweet>()
 
         if (statusCode == 200) {
-            if (json["body"]!!.jsonPrimitive.content == "\n") {
+            val htmlBody = json["body"]!!.jsonPrimitive.content
+            if (htmlBody == "\n") {
                 logger.info { "No new tweets were found when polling $screenName's timeline, so we will return a noop result..." }
                 return NoopPollingResult(statusCode, System.currentTimeMillis())
             }
@@ -62,9 +63,7 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
             // println("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false")
             // println(json)
 
-            val jsoup = Jsoup.parse(
-                json["body"]!!.jsonPrimitive.content
-            )
+            val jsoup = Jsoup.parse(htmlBody)
 
             // println(jsoup.body())
 

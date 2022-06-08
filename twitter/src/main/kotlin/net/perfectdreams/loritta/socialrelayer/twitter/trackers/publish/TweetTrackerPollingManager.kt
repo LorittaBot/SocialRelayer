@@ -151,6 +151,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                         }
                     }
 
+                    logger.info { "Polling ${jobs.size} users' timelines..." }
                     jobs.awaitAll()
                     val finish = System.currentTimeMillis()
                     logger.info { "Finished polling ${jobs.size} users' timelines! Took ${finish - start}ms" }

@@ -32,6 +32,7 @@ import kotlin.system.measureTimeMillis
 class TweetRelayer(val config: SocialRelayerTwitterConfig) {
     companion object {
         private val logger = KotlinLogging.logger {}
+        private const val CATALYSTDRIFTER_ID = 1166037075264753664L
     }
 
     val twitter4j = TwitterFactory(buildTwitterConfig()).instance
@@ -104,6 +105,9 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
 
             var copy = trackedTwitterAccounts.toList()
                 .map { it[TrackedTwitterAccounts.twitterAccountId] }
+                .toMutableList()
+            copy.remove(CATALYSTDRIFTER_ID)
+
             val oldStreamUserIds = copy.take(10_000)
 
             // Check if the IDs are correct
@@ -130,6 +134,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
             }
 
             copy = copy.drop(10_000)
+                .toMutableList()
 
             // TODO: I'm not sure but Twitter Stream v2 ALWAYS RANDOMLY FAILS!! It never reconnects
             // And this annoys me so much :(
@@ -219,7 +224,7 @@ class TweetRelayer(val config: SocialRelayerTwitterConfig) {
 
             // Add overflowing users back to the list
             copy = builder.builtRules.drop(25).flatMap { it.userId } + copy */
-
+            copy.add(CATALYSTDRIFTER_ID)
             logger.info { "Polling: ${copy.size}" }
 
             val pollScreenNames = retrieveScreenNamesFromIds(copy)

@@ -34,12 +34,9 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
         logger.info { "Polling $screenName's Timeline..." }
         // Sadly we can't rely on the "Last-Modified-Date" header to avoid unnecessary parsing of the body
         //
-        // We also limit how many tweets are polled by changing the "tweet_limit" parameter to 3
-        // By default it is 20, and it takes ~72ms to generate the page on Twitter's backend (check the "x-response-time" header")
-        // By using 3, it takes only ~31ms to generate the page on Twitter's backend!
-        // We also (ab)use the "min_position" parameter, to only pull new tweets (if we have already pulled another tweet before)
+        // We (ab)use the "min_position" parameter, to only pull new tweets (if we have already pulled another tweet before)
         val pollingBody = withContext(Dispatchers.IO) {
-            http.get("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&tweet_limit=3&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false") {
+            http.get("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&tweet_limit=20&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false") {
                 if (lastReceivedTweetId != -1L)
                     parameter("min_position", lastReceivedTweetId)
 
@@ -111,27 +108,22 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
                 }
             }
 
-            if (allTweetsFromTimeline.isNotEmpty()) {
-                val firstTweet = allTweetsFromTimeline.first()
+            val allUserTweetsFromTimeline = polledTweets.filterIsInstance<PolledUserTweet>()
+
+            if (allUserTweetsFromTimeline.isNotEmpty()) {
+                val firstTweet = allUserTweetsFromTimeline.first()
 
                 // Store newly received tweet ID
-                lastReceivedTweetId = firstTweet
-                    .attr("data-click-to-open-target")
-                    .split("/")
-                    .last()
-                    .toLong()
+                lastReceivedTweetId = firstTweet.tweetId
 
                 // Store date too
-                lastTweetReceivedAt = LocalDateTime.parse(
-                    firstTweet.selectFirst("time")
-                        .attr("datetime")
-                        .substringBefore("+")
-                )
+                lastTweetReceivedAt = firstTweet.sentAt
 
                 // Yay!
             }
 
             logger.info { "Successfully polled $screenName's timeline! $polledTweets" }
+
             // Yay! Everything went pretty much ok!
             return SuccessfulPollingResult(
                 statusCode,

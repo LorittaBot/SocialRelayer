@@ -147,7 +147,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                                 }
                             }
                         } catch (e: Throwable) {
-                            logger.warn { "Something went wrong while polling ${trackerPolling.screenName}'s tweets!" }
+                            logger.warn(e) { "Something went wrong while polling ${trackerPolling.screenName}'s tweets!" }
                         }
                     }
 

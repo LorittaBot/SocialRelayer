@@ -135,7 +135,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                                     logger.info { "Polled ${trackerPolling.screenName}! Result: $newResult" }
 
                                     if (newResult is SuccessfulPollingResult) {
-                                        for (tweet in newResult.tweets) {
+                                        for (tweet in newResult.tweets.filterIsInstance<PolledUserTweet>()) {
                                             if (previousMostRecentTweetId != null && previousMostRecentTweetId >= tweet.tweetId)
                                                 break
 

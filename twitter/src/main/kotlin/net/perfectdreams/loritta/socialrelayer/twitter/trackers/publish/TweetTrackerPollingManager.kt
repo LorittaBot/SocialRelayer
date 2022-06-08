@@ -58,7 +58,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                                     // (We don't care if it was a retweet or not, because we care about user activity)
                                     val mostRecentTweet = result.tweets.firstOrNull()
 
-                                    // logger.info { "${trackerPolling.screenName} last tweet as $mostRecentTweet" }
+                                    logger.info { "${trackerPolling.screenName} most recent tweet is $mostRecentTweet" }
 
                                     // To avoid spamming Twitter's embed URL, we are going to apply a small randomness to the value to cause the embed check to shift a little bit
                                     fun valueWithRandomOffset(value: Long) = value + random.nextLong(-15_000, 15_000)

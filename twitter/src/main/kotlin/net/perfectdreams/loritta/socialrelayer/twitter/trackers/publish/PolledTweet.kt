@@ -1,12 +1,11 @@
 package net.perfectdreams.loritta.socialrelayer.twitter.trackers.publish
 
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 
-@Serializable
-data class PolledTweet(
-    val tweetId: Long,
-    @Contextual
-    val sentAt: LocalDateTime
-)
+sealed class PolledTweet {
+    abstract val tweetId: Long
+    abstract val sentAt: LocalDateTime
+}
+
+data class PolledUserTweet(override val tweetId: Long, override val sentAt: LocalDateTime) : PolledTweet()
+data class PolledUserRetweet(override val tweetId: Long, override val sentAt: LocalDateTime) : PolledTweet()

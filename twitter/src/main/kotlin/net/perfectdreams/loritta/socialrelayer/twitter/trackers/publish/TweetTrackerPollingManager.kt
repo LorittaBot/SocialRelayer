@@ -54,14 +54,18 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                                     // logger.info { "${trackerPolling.screenName} last poll was a sucess!" }
 
                                     // If it was a poll success...
+                                    // (We don't care if it was a retweet or not, because we care about user activity)
                                     val mostRecentTweet = result.tweets.firstOrNull()
 
                                     // logger.info { "${trackerPolling.screenName} last tweet as $mostRecentTweet" }
 
+                                    // To avoid spamming Twitter's embed URL, we are going to apply a small randomness to the value to cause the embed check to shift a little bit
+                                    fun valueWithRandomOffset(value: Long) = value + random.nextLong(-15_000, 15_000)
+
                                     if (mostRecentTweet == null) {
                                         // If there isn't a most recent tweet (maybe the user retweets a lot?)
                                         // We are going to check after 15m
-                                        shouldCheckNow = (System.currentTimeMillis() - polledAt) >= 900_000
+                                        shouldCheckNow = (System.currentTimeMillis() - polledAt) >= valueWithRandomOffset(900_000)
                                     } else {
                                         // If there is a most recent tweet, we are going to base around when the most recent tweet was sent
                                         val sentAt = mostRecentTweet.sentAt
@@ -71,25 +75,24 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
 
                                         shouldCheckNow = when {
                                             sentAt.isAfter(now.minusDays(3)) -> {
-                                                logger.info { "${trackerPolling.screenName} will use 30s delay" }
-                                                // Sent the tweet in the last 3 days, so we are going to check every 30s
-                                                // To avoid spamming Twitter's embed URL, we are going to apply a small randomness to the value to cause the embed check to shift a little bit
-                                                (System.currentTimeMillis() - polledAt) >= random.nextLong(25_000, 35_001)
+                                                logger.info { "${trackerPolling.screenName} will use 1 minute delay" }
+                                                // Sent the tweet in the last 3 days, so we are going to check every 1 minute
+                                                (System.currentTimeMillis() - polledAt) >= valueWithRandomOffset(60_000)
                                             }
                                             sentAt.isAfter(now.minusDays(7)) -> {
-                                                logger.info { "${trackerPolling.screenName} will use 120s delay" }
-                                                // Sent the tweet in the last 7 days, so we are going to check every 120s
-                                                (System.currentTimeMillis() - polledAt) >= random.nextLong(60_000, 180_001)
+                                                logger.info { "${trackerPolling.screenName} will use 2.5m delay" }
+                                                // Sent the tweet in the last 7 days, so we are going to check every 2 minutes
+                                                (System.currentTimeMillis() - polledAt) >= valueWithRandomOffset(120_000)
                                             }
                                             sentAt.isAfter(now.minusDays(14)) -> {
                                                 logger.info { "${trackerPolling.screenName} will use 5m delay" }
                                                 // Sent the tweet in the last 14 days, so we are going to check every 5m
-                                                (System.currentTimeMillis() - polledAt) >= 300_000
+                                                (System.currentTimeMillis() - polledAt) >= valueWithRandomOffset(300_000)
                                             }
                                             else -> {
                                                 logger.info { "${trackerPolling.screenName} will use 15m delay" }
                                                 // anything else, check every 15m
-                                                (System.currentTimeMillis() - polledAt) >= 900_000
+                                                (System.currentTimeMillis() - polledAt) >= valueWithRandomOffset(900_000)
                                             }
                                         }
                                     }
@@ -115,10 +118,11 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
 
                             if (shouldCheckNow) {
                                 var wasSuccessful = false
-                                var previousMostRecentTweet: PolledTweet? = null
+                                var previousMostRecentTweet: PolledUserTweet? = null
+                                // Now HERE we only care about user tweets
                                 if (result is SuccessfulPollingResult) {
                                     wasSuccessful = true
-                                    previousMostRecentTweet = result.tweets.firstOrNull()
+                                    previousMostRecentTweet = result.tweets.filterIsInstance<PolledUserTweet>().firstOrNull()
                                 }
 
                                 val previousMostRecentTweetId = previousMostRecentTweet?.tweetId
@@ -126,6 +130,7 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
 
                                 jobs += GlobalScope.async {
                                     val newResult = check(trackerPolling)
+                                    logger.info { "Polled ${trackerPolling.screenName}! Result: $newResult" }
 
                                     if (newResult is SuccessfulPollingResult) {
                                         for (tweet in newResult.tweets) {
@@ -242,7 +247,10 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                     val result = ttpt.check()
 
                     mutex.withLock {
-                        trackerPollings[ttpt] = result
+                        // If it is a no-op polling result, we will keep the old polling result
+                        if (result !is NoopPollingResult) {
+                            trackerPollings[ttpt] = result
+                        }
                     }
 
                     result

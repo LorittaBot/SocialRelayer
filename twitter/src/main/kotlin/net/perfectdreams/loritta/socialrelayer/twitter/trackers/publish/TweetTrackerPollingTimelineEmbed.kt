@@ -31,23 +31,37 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
     var lastTweetReceivedAt: LocalDateTime? = null
 
     suspend fun check(): PollingResult {
-        // logger.info { "Polling $screenName's Timeline..." }
-        val aaa = withContext(Dispatchers.IO) {
-            http.get("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false") {
+        logger.info { "Polling $screenName's Timeline..." }
+        // Sadly we can't rely on the "Last-Modified-Date" header to avoid unnecessary parsing of the body
+        //
+        // We also limit how many tweets are polled by changing the "tweet_limit" parameter to 3
+        // By default it is 20, and it takes ~72ms to generate the page on Twitter's backend (check the "x-response-time" header")
+        // By using 3, it takes only ~31ms to generate the page on Twitter's backend!
+        // We also (ab)use the "min_position" parameter, to only pull new tweets (if we have already pulled another tweet before)
+        val pollingBody = withContext(Dispatchers.IO) {
+            http.get("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&tweet_limit=3&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false") {
+                if (lastReceivedTweetId != -1L)
+                    parameter("min_position", lastReceivedTweetId)
+
                 header("Referer", "https://htmledit.squarefree.com/")
             }.bodyAsText()
         }
 
         val json = Json.parseToJsonElement(
-            aaa.substringAfter("(")
+            pollingBody.substringAfter("(")
                 .removeSuffix(");")
         ).jsonObject
 
         val statusCode = json["headers"]!!.jsonObject["status"]!!.jsonPrimitive.int
 
-        val polledTweet = mutableListOf<PolledTweet>()
+        val polledTweets = mutableListOf<PolledTweet>()
 
         if (statusCode == 200) {
+            if (pollingBody == "\n") {
+                logger.info { "No new tweets were found when polling $screenName's timeline, so we will return a noop result..." }
+                return NoopPollingResult(statusCode, System.currentTimeMillis())
+            }
+
             // println("https://cdn.syndication.twimg.com/timeline/profile?callback=__twttr.callbacks.tl_i0_profile_${screenName}_old&dnt=true&domain=htmledit.squarefree.com&lang=en&screen_name=$screenName&suppress_response_codes=true&t=${System.currentTimeMillis() / 1_000}&tz=GMT-0300&with_replies=false")
             // println(json)
 
@@ -58,7 +72,6 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
             // println(jsoup.body())
 
             val allTweetsFromTimeline = jsoup.getElementsByClass("timeline-Tweet")
-                .filterNot { it.hasClass("timeline-Tweet--isRetweet") }
                 .filter { it.hasAttr("data-click-to-open-target") }
 
             /* println(
@@ -71,17 +84,31 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
                 val tweetId = tweetUrl.split("/").last()
                     .toLong()
 
-                // Add the tweet from the results to our list
-                polledTweet.add(
-                    PolledTweet(
-                        tweetId,
-                        LocalDateTime.parse(
-                            tweet.selectFirst("time")
-                                .attr("datetime")
-                                .substringBefore("+")
+                if (tweet.hasClass("timeline-Tweet--isRetweet")) {
+                    // Used to track user activity
+                    polledTweets.add(
+                        PolledUserRetweet(
+                            tweetId,
+                            LocalDateTime.parse(
+                                tweet.selectFirst("time")
+                                    .attr("datetime")
+                                    .substringBefore("+")
+                            )
                         )
                     )
-                )
+                } else {
+                    // Add the tweet from the results to our list
+                    polledTweets.add(
+                        PolledUserTweet(
+                            tweetId,
+                            LocalDateTime.parse(
+                                tweet.selectFirst("time")
+                                    .attr("datetime")
+                                    .substringBefore("+")
+                            )
+                        )
+                    )
+                }
             }
 
             if (allTweetsFromTimeline.isNotEmpty()) {
@@ -103,18 +130,20 @@ class TweetTrackerPollingTimelineEmbed(val tweetRelayer: TweetRelayer, val scree
 
                 // Yay!
             }
+
+            logger.info { "Successfully polled $screenName's timeline! $polledTweets" }
             // Yay! Everything went pretty much ok!
             return SuccessfulPollingResult(
                 statusCode,
                 System.currentTimeMillis(),
-                polledTweet
+                polledTweets
             )
         } else {
             // {"headers":{"status":403,"message":"Content unavailable."}}
             logger.warn { "Header is not success while checking $screenName's timeline! $json"}
         }
 
-        return PollingResult(
+        return FailPollingResult(
             statusCode,
             System.currentTimeMillis()
         )

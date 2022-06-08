@@ -45,102 +45,109 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
 
                     // First
                     for ((trackerPolling, result) in trackerPollings) {
-                        var shouldCheckNow = false
-                        if (result != null) {
-                            val polledAt = result.polledAt
+                        try {
+                            var shouldCheckNow = false
+                            if (result != null) {
+                                val polledAt = result.polledAt
 
-                            if (result is SuccessfulPollingResult) {
-                                // logger.info { "${trackerPolling.screenName} last poll was a sucess!" }
+                                if (result is SuccessfulPollingResult) {
+                                    // logger.info { "${trackerPolling.screenName} last poll was a sucess!" }
 
-                                // If it was a poll success...
-                                val mostRecentTweet = result.tweets.firstOrNull()
+                                    // If it was a poll success...
+                                    val mostRecentTweet = result.tweets.firstOrNull()
 
-                                // logger.info { "${trackerPolling.screenName} last tweet as $mostRecentTweet" }
+                                    // logger.info { "${trackerPolling.screenName} last tweet as $mostRecentTweet" }
 
-                                if (mostRecentTweet == null) {
-                                    // If there isn't a most recent tweet (maybe the user retweets a lot?)
-                                    // We are going to check after 15m
-                                    shouldCheckNow = (System.currentTimeMillis() - polledAt) >= 900_000
-                                } else {
-                                    // If there is a most recent tweet, we are going to base around when the most recent tweet was sent
-                                    val sentAt = mostRecentTweet.sentAt
-                                    val now = LocalDateTime.now()
+                                    if (mostRecentTweet == null) {
+                                        // If there isn't a most recent tweet (maybe the user retweets a lot?)
+                                        // We are going to check after 15m
+                                        shouldCheckNow = (System.currentTimeMillis() - polledAt) >= 900_000
+                                    } else {
+                                        // If there is a most recent tweet, we are going to base around when the most recent tweet was sent
+                                        val sentAt = mostRecentTweet.sentAt
+                                        val now = LocalDateTime.now()
 
-                                    // logger.info { "Diff: ${(System.currentTimeMillis() - polledAt)}" }
+                                        // logger.info { "Diff: ${(System.currentTimeMillis() - polledAt)}" }
 
-                                    shouldCheckNow = when {
-                                        sentAt.isAfter(now.minusDays(3)) -> {
-                                            logger.info { "${trackerPolling.screenName} will use 30s delay" }
-                                            // Sent the tweet in the last 3 days, so we are going to check every 30s
-                                            // To avoid spamming Twitter's embed URL, we are going to apply a small randomness to the value to cause the embed check to shift a little bit
-                                            (System.currentTimeMillis() - polledAt) >= random.nextLong(25_000, 35_001)
-                                        }
-                                        sentAt.isAfter(now.minusDays(7)) -> {
-                                            logger.info { "${trackerPolling.screenName} will use 120s delay" }
-                                            // Sent the tweet in the last 7 days, so we are going to check every 120s
-                                            (System.currentTimeMillis() - polledAt) >= random.nextLong(60_000, 180_001)
-                                        }
-                                        sentAt.isAfter(now.minusDays(14)) -> {
-                                            logger.info { "${trackerPolling.screenName} will use 5m delay" }
-                                            // Sent the tweet in the last 14 days, so we are going to check every 5m
-                                            (System.currentTimeMillis() - polledAt) >= 300_000
-                                        }
-                                        else -> {
-                                            logger.info { "${trackerPolling.screenName} will use 15m delay" }
-                                            // anything else, check every 15m
-                                            (System.currentTimeMillis() - polledAt) >= 900_000
+                                        shouldCheckNow = when {
+                                            sentAt.isAfter(now.minusDays(3)) -> {
+                                                logger.info { "${trackerPolling.screenName} will use 30s delay" }
+                                                // Sent the tweet in the last 3 days, so we are going to check every 30s
+                                                // To avoid spamming Twitter's embed URL, we are going to apply a small randomness to the value to cause the embed check to shift a little bit
+                                                (System.currentTimeMillis() - polledAt) >= random.nextLong(25_000, 35_001)
+                                            }
+                                            sentAt.isAfter(now.minusDays(7)) -> {
+                                                logger.info { "${trackerPolling.screenName} will use 120s delay" }
+                                                // Sent the tweet in the last 7 days, so we are going to check every 120s
+                                                (System.currentTimeMillis() - polledAt) >= random.nextLong(60_000, 180_001)
+                                            }
+                                            sentAt.isAfter(now.minusDays(14)) -> {
+                                                logger.info { "${trackerPolling.screenName} will use 5m delay" }
+                                                // Sent the tweet in the last 14 days, so we are going to check every 5m
+                                                (System.currentTimeMillis() - polledAt) >= 300_000
+                                            }
+                                            else -> {
+                                                logger.info { "${trackerPolling.screenName} will use 15m delay" }
+                                                // anything else, check every 15m
+                                                (System.currentTimeMillis() - polledAt) >= 900_000
+                                            }
                                         }
                                     }
+                                } else {
+                                    logger.info { "${trackerPolling.screenName} had a poll failure!" }
+                                    // If it was a poll failure, we are going to check again after 24 hours
+                                    // (example: user privated their account)
+                                    shouldCheckNow = (System.currentTimeMillis() - polledAt) >= 86_400_000
                                 }
                             } else {
-                                logger.info { "${trackerPolling.screenName} had a poll failure!" }
-                                // If it was a poll failure, we are going to check again after 24 hours
-                                // (example: user privated their account)
-                                shouldCheckNow = (System.currentTimeMillis() - polledAt) >= 86_400_000
-                            }
-                        } else {
-                            // This can happen if the connection throws an exception
-                            // But this is pretty bad... we shouldn't check it now...
-                            // But what we can do now? Hope for the best?
-                            //
-                            // Before we did check if it was the first failing poll and, if it was, execute it
-                            // But this had a nasty bug that if the first ALWAYS fails, the other maybe-not-broken polls would also not work
-                            // So we select a random broken poll and hope for the best, if it was a maybe-not-broken poll, it will leave the broken polls, yay!
-                            shouldCheckNow = trackerPolling == randomBrokenPolling
-                            // logger.warn { "$trackerPolling for some reason doesn't has a polling result! Bug? Are we going to recheck it? ${shouldCheckNow}" }
-                        }
-
-                        logger.info { "Screen Name: ${trackerPolling.screenName}, should check now? $shouldCheckNow"}
-                        if (shouldCheckNow) {
-                            var wasSuccessful = false
-                            var previousMostRecentTweet: PolledTweet? = null
-                            if (result is SuccessfulPollingResult) {
-                                wasSuccessful = true
-                                previousMostRecentTweet = result.tweets.firstOrNull()
+                                // This can happen if the connection throws an exception
+                                // But this is pretty bad... we shouldn't check it now...
+                                // But what we can do now? Hope for the best?
+                                //
+                                // Before we did check if it was the first failing poll and, if it was, execute it
+                                // But this had a nasty bug that if the first ALWAYS fails, the other maybe-not-broken polls would also not work
+                                // So we select a random broken poll and hope for the best, if it was a maybe-not-broken poll, it will leave the broken polls, yay!
+                                shouldCheckNow = trackerPolling == randomBrokenPolling
+                                // logger.warn { "$trackerPolling for some reason doesn't has a polling result! Bug? Are we going to recheck it? ${shouldCheckNow}" }
                             }
 
-                            val previousMostRecentTweetId = previousMostRecentTweet?.tweetId
-                            logger.info { "${trackerPolling.screenName} last tweet was $previousMostRecentTweet, was it successful? $wasSuccessful" }
+                            logger.info { "Screen Name: ${trackerPolling.screenName}, should check now? $shouldCheckNow" }
 
-                            jobs += GlobalScope.async {
-                                val newResult = check(trackerPolling)
+                            if (shouldCheckNow) {
+                                var wasSuccessful = false
+                                var previousMostRecentTweet: PolledTweet? = null
+                                if (result is SuccessfulPollingResult) {
+                                    wasSuccessful = true
+                                    previousMostRecentTweet = result.tweets.firstOrNull()
+                                }
 
-                                if (newResult is SuccessfulPollingResult) {
-                                    for (tweet in newResult.tweets) {
-                                        if (previousMostRecentTweetId != null && previousMostRecentTweetId >= tweet.tweetId)
-                                            break
+                                val previousMostRecentTweetId = previousMostRecentTweet?.tweetId
+                                logger.info { "${trackerPolling.screenName} last tweet was $previousMostRecentTweet, was it successful? $wasSuccessful" }
 
-                                        trackerPolling.tweetRelayer.receivedNewTweet(
-                                            TweetInfo(
-                                                TrackerSource.PUBLISH_POLLING_TIMELINE_EMBED,
-                                                tweetRelayer.retrieveTwitterAccountDataFromDatabaseByScreenName(trackerPolling.screenName)?.id?.value ?: -1L,
-                                                trackerPolling.screenName, // Fix later
-                                                tweet.tweetId
+                                jobs += GlobalScope.async {
+                                    val newResult = check(trackerPolling)
+
+                                    if (newResult is SuccessfulPollingResult) {
+                                        for (tweet in newResult.tweets) {
+                                            if (previousMostRecentTweetId != null && previousMostRecentTweetId >= tweet.tweetId)
+                                                break
+
+                                            trackerPolling.tweetRelayer.receivedNewTweet(
+                                                TweetInfo(
+                                                    TrackerSource.PUBLISH_POLLING_TIMELINE_EMBED,
+                                                    tweetRelayer.retrieveTwitterAccountDataFromDatabaseByScreenName(
+                                                        trackerPolling.screenName
+                                                    )?.id?.value ?: -1L,
+                                                    trackerPolling.screenName, // Fix later
+                                                    tweet.tweetId
+                                                )
                                             )
-                                        )
+                                        }
                                     }
                                 }
                             }
+                        } catch (e: Throwable) {
+                            logger.warn { "Something went wrong while polling ${trackerPolling.screenName}'s tweets!" }
                         }
                     }
 

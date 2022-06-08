@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 
 @Serializable
-class PolledTweet(
+data class PolledTweet(
     val tweetId: Long,
     @Contextual
     val sentAt: LocalDateTime

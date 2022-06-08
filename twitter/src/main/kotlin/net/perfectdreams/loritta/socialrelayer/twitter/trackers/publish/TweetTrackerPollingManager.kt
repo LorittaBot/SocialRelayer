@@ -118,15 +118,17 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
 
                             if (shouldCheckNow) {
                                 var wasSuccessful = false
-                                var previousMostRecentTweet: PolledUserTweet? = null
+                                var previousMostRecentUserTweet: PolledUserTweet? = null
+                                var previousMostRecentTweet: PolledTweet? = null
                                 // Now HERE we only care about user tweets
                                 if (result is SuccessfulPollingResult) {
                                     wasSuccessful = true
-                                    previousMostRecentTweet = result.tweets.filterIsInstance<PolledUserTweet>().firstOrNull()
+                                    previousMostRecentTweet = result.tweets.firstOrNull()
+                                    previousMostRecentUserTweet = result.tweets.filterIsInstance<PolledUserTweet>().firstOrNull()
                                 }
 
-                                val previousMostRecentTweetId = previousMostRecentTweet?.tweetId
-                                logger.info { "${trackerPolling.screenName} last tweet was $previousMostRecentTweet, was it successful? $wasSuccessful" }
+                                val previousMostRecentTweetId = previousMostRecentUserTweet?.tweetId
+                                logger.info { "${trackerPolling.screenName} last tweet was $previousMostRecentUserTweet (any tweet type: $previousMostRecentTweet), was it successful? $wasSuccessful" }
 
                                 jobs += GlobalScope.async {
                                     val newResult = check(trackerPolling)

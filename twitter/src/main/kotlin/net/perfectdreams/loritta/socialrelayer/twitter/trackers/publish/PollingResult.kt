@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class PollingResult(
     val statusCode: Int,
-    val polledAt: Long
+    var polledAt: Long
 )

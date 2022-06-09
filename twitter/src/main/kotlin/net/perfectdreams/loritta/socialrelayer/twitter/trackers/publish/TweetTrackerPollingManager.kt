@@ -252,8 +252,10 @@ class TweetTrackerPollingManager(val tweetRelayer: TweetRelayer) {
                     val result = ttpt.check()
 
                     mutex.withLock {
-                        // If it is a no-op polling result, we will keep the old polling result
-                        if (result !is NoopPollingResult) {
+                        // If it is a no-op polling result, we will keep the old polling result BUT we will update the last queried at field, to avoid querying the same user over and over
+                        if (result is NoopPollingResult) {
+                            trackerPollings[ttpt]?.polledAt = result.polledAt
+                        } else {
                             trackerPollings[ttpt] = result
                         }
                     }
